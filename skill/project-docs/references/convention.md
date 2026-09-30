@@ -1,3 +1,8 @@
+---
+title: Convention reference
+summary: The full convention — file layout, frontmatter, backlog and decision formats, every check and its tier, and the tool's commands. The skill loads it before init and adopt.
+---
+
 # The project-docs convention
 
 ## Layout
@@ -35,9 +40,21 @@ partial; unlisted pages follow in the default order. An entry that is neither a 
 a group is an ERROR.
 
 Markdown that must live outside `docs/` (a skill's own files, a README, an ADR folder)
-can join the site with `[site] extra` globs. Those pages render under
-`docs/site/extra/<path>.html` in a "Reference" nav group, need no frontmatter (the title
-falls back to `name`, then the first H1), and have their links checked like any page.
+can join the site with `[site] extra`. Give each set a group name and a sentence saying
+what it is:
+
+```toml
+[[site.extra]]
+group = "Decision records"
+about = "Architecture decision records, kept beside the code in adr/."
+paths = ["adr/*.md"]
+```
+
+(A plain list of globs, `extra = ["README.md"]`, is one untitled "Reference" group.)
+Pages render under `docs/site/extra/<path>.html`, in the listed order. Each shows its
+group's `about` text and a "Source:" line naming the file, so a reader knows where it
+lives. They need no frontmatter — the title falls back to `name`, then the first H1 —
+and their links are checked like any page's.
 
 ## Doc-map
 

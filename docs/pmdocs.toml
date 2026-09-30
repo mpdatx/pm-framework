@@ -2,9 +2,14 @@
 title = "pm-framework"
 # Sidebar order: status first, then reference, then history.
 nav = ["docs/index.md", "docs/install.md", "docs/roadmap.md", "docs/backlog.md", "docs/product.md",
-       "docs/architecture.md", "docs/decisions.md", "Reference", "Specs", "docs/backlog-archive.md"]
+       "docs/architecture.md", "docs/decisions.md", "The skill", "Specs", "docs/backlog-archive.md"]
+
 # The skill's own Markdown lives in skill/ (the skill reads it there); render it too.
-extra = ["skill/project-docs/SKILL.md", "skill/project-docs/references/*.md"]
+[[site.extra]]
+group = "The skill"
+about = "These are the project-docs skill's own files, as installed into ~/.claude/skills/project-docs. SKILL.md is what Claude reads when the skill triggers; the convention and adoption references are loaded on demand during init and adopt."
+paths = ["skill/project-docs/SKILL.md", "skill/project-docs/references/convention.md",
+         "skill/project-docs/references/adopt.md"]
 
 [paths]
 specs = "docs/superpowers/specs"

@@ -53,7 +53,7 @@ release". Bump `VERSION` in `tool/pmdocs.py` once per release, not per change.
 | git, drift, staleness | `changed_files`, `staleness`, `coverage`, `drift_static`, `drift_stale_progress`; staleness and coverage skip the tool's own `VENDORED` files |
 | fixes and check | archive closed items, add draft frontmatter, `cmd_check` |
 | roadmap | `render_roadmap` (deterministic: static drift only) |
-| site | markdown-it rendering, link rewriting, nav (default groups, or `[site] nav` order), collapsible TOC, `[site] extra` pages under `site/extra/`, `build` |
+| site | markdown-it rendering, link rewriting, nav (default groups, or `[site] nav` order), collapsible TOC, `[site] extra` pages under `site/extra/` (named groups, each page showing its group's `about` and its source path), `build` |
 | hooks | `hook_pre_commit` (exit 10 blocks), `hook_post_edit`, `hook_stop` |
 | install-hooks | `core.hooksPath` and `.claude/settings.json` merge/removal |
 | cli | argparse; `cmd_*` dispatch; errors exit 2 |

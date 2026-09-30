@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The project-docs convention — pm-framework</title>
+<title>Convention reference — pm-framework</title>
 <style>:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#6b6b66;--line:#e2e1dc;--accent:#2f5d8a;--code:#f1f0ec;--side:#f4f3ef}
 @media (prefers-color-scheme:dark){:root{--bg:#161615;--fg:#e8e6e1;--muted:#9a978f;--line:#2e2d2a;--accent:#8ab4e0;--code:#22211f;--side:#1c1b1a}}
 *{box-sizing:border-box}
@@ -22,6 +22,7 @@ h1{margin-top:0;line-height:1.2}
 h2{margin-top:2.2rem;padding-bottom:.25rem;border-bottom:1px solid var(--line)}
 .summary{color:var(--muted);font-size:1.05rem;margin-top:-.5rem}
 .meta{font-size:.85rem;color:var(--muted)}
+.about{font-size:.9rem;border-left:3px solid var(--accent);padding:.1rem .75rem;margin:.5rem 0}
 .badge{display:inline-block;padding:0 .5rem;border-radius:999px;border:1px solid var(--line);font-weight:600}
 .s-shipped,.s-done{background:#d9f0dc;color:#1d4d24}
 .s-in-progress,.s-approved{background:#dbe8f7;color:#1d3a5c}
@@ -53,10 +54,10 @@ img,svg{max-width:100%}
 <li><a href="../../../../architecture.html">Architecture</a></li>
 <li><a href="../../../../decisions.html">Decisions</a></li>
 </ul>
-<h2>Reference</h2><ul>
-<li><a href="adopt.html">Adopting project-docs in an existing project</a></li>
+<h2>The skill</h2><ul>
 <li><a href="../SKILL.html">project-docs</a></li>
-<li><a href="convention.html" aria-current="page">The project-docs convention</a></li>
+<li><a href="convention.html" aria-current="page">Convention reference</a></li>
+<li><a href="adopt.html">Adoption playbook</a></li>
 </ul>
 <h2>Specs</h2><ul>
 <li><a href="../../../../superpowers/specs/2026-09-30-project-docs-design.html">project-docs — a portable documentation and work-status convention</a></li>
@@ -66,7 +67,10 @@ img,svg{max-width:100%}
 </ul>
 </nav>
 <main>
-<h1>The project-docs convention</h1>
+<h1>Convention reference</h1>
+<p class="summary">The full convention — file layout, frontmatter, backlog and decision formats, every check and its tier, and the tool&#x27;s commands. The skill loads it before init and adopt.</p>
+<p class="about">These are the project-docs skill&#x27;s own files, as installed into ~/.claude/skills/project-docs. SKILL.md is what Claude reads when the skill triggers; the convention and adoption references are loaded on demand during init and adopt.</p>
+<p class="meta source">Source: <a href="../../../../../../skill/project-docs/references/convention.md"><code>skill/project-docs/references/convention.md</code></a> — outside <code>docs/</code>, rendered here for reading.</p>
 <details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#layout">Layout</a></li><li class="l2"><a href="#frontmatter-yaml-between-----lines">Frontmatter (YAML, between --- lines)</a></li><li class="l2"><a href="#doc-map">Doc-map</a></li><li class="l2"><a href="#backlog-items">Backlog items</a></li><li class="l2"><a href="#decisions">Decisions</a></li><li class="l2"><a href="#inbox">Inbox</a></li><li class="l2"><a href="#checks-and-tiers">Checks and tiers</a></li><li class="l2"><a href="#tool">Tool</a></li></ul></details>
 
 <h2 id="layout">Layout</h2>
@@ -98,9 +102,18 @@ groups — list pages and group names in <code>[site] nav</code> in <code>pmdocs
 partial; unlisted pages follow in the default order. An entry that is neither a page nor
 a group is an ERROR.</p>
 <p>Markdown that must live outside <code>docs/</code> (a skill's own files, a README, an ADR folder)
-can join the site with <code>[site] extra</code> globs. Those pages render under
-<code>docs/site/extra/&lt;path&gt;.html</code> in a &quot;Reference&quot; nav group, need no frontmatter (the title
-falls back to <code>name</code>, then the first H1), and have their links checked like any page.</p>
+can join the site with <code>[site] extra</code>. Give each set a group name and a sentence saying
+what it is:</p>
+<pre><code class="language-toml">[[site.extra]]
+group = &quot;Decision records&quot;
+about = &quot;Architecture decision records, kept beside the code in adr/.&quot;
+paths = [&quot;adr/*.md&quot;]
+</code></pre>
+<p>(A plain list of globs, <code>extra = [&quot;README.md&quot;]</code>, is one untitled &quot;Reference&quot; group.)
+Pages render under <code>docs/site/extra/&lt;path&gt;.html</code>, in the listed order. Each shows its
+group's <code>about</code> text and a &quot;Source:&quot; line naming the file, so a reader knows where it
+lives. They need no frontmatter — the title falls back to <code>name</code>, then the first H1 —
+and their links are checked like any page's.</p>
 <h2 id="doc-map">Doc-map</h2>
 <p><code>[[map]]</code> entries in <code>pmdocs.toml</code> pair source globs (<code>paths</code>) with the pages that
 describe them (<code>pages</code>). Every path is relative to the repository root, and a page may

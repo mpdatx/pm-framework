@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Adopting project-docs in an existing project — pm-framework</title>
+<title>Adoption playbook — pm-framework</title>
 <style>:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#6b6b66;--line:#e2e1dc;--accent:#2f5d8a;--code:#f1f0ec;--side:#f4f3ef}
 @media (prefers-color-scheme:dark){:root{--bg:#161615;--fg:#e8e6e1;--muted:#9a978f;--line:#2e2d2a;--accent:#8ab4e0;--code:#22211f;--side:#1c1b1a}}
 *{box-sizing:border-box}
@@ -22,6 +22,7 @@ h1{margin-top:0;line-height:1.2}
 h2{margin-top:2.2rem;padding-bottom:.25rem;border-bottom:1px solid var(--line)}
 .summary{color:var(--muted);font-size:1.05rem;margin-top:-.5rem}
 .meta{font-size:.85rem;color:var(--muted)}
+.about{font-size:.9rem;border-left:3px solid var(--accent);padding:.1rem .75rem;margin:.5rem 0}
 .badge{display:inline-block;padding:0 .5rem;border-radius:999px;border:1px solid var(--line);font-weight:600}
 .s-shipped,.s-done{background:#d9f0dc;color:#1d4d24}
 .s-in-progress,.s-approved{background:#dbe8f7;color:#1d3a5c}
@@ -53,10 +54,10 @@ img,svg{max-width:100%}
 <li><a href="../../../../architecture.html">Architecture</a></li>
 <li><a href="../../../../decisions.html">Decisions</a></li>
 </ul>
-<h2>Reference</h2><ul>
-<li><a href="adopt.html" aria-current="page">Adopting project-docs in an existing project</a></li>
+<h2>The skill</h2><ul>
 <li><a href="../SKILL.html">project-docs</a></li>
-<li><a href="convention.html">The project-docs convention</a></li>
+<li><a href="convention.html">Convention reference</a></li>
+<li><a href="adopt.html" aria-current="page">Adoption playbook</a></li>
 </ul>
 <h2>Specs</h2><ul>
 <li><a href="../../../../superpowers/specs/2026-09-30-project-docs-design.html">project-docs — a portable documentation and work-status convention</a></li>
@@ -66,7 +67,10 @@ img,svg{max-width:100%}
 </ul>
 </nav>
 <main>
-<h1>Adopting project-docs in an existing project</h1>
+<h1>Adoption playbook</h1>
+<p class="summary">How to migrate a project that already has docs, TODO files or hooks — the inventory checklist, mapping patterns, and hazards learned in real migrations. The skill loads it for adopt.</p>
+<p class="about">These are the project-docs skill&#x27;s own files, as installed into ~/.claude/skills/project-docs. SKILL.md is what Claude reads when the skill triggers; the convention and adoption references are loaded on demand during init and adopt.</p>
+<p class="meta source">Source: <a href="../../../../../../skill/project-docs/references/adopt.md"><code>skill/project-docs/references/adopt.md</code></a> — outside <code>docs/</code>, rendered here for reading.</p>
 <details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#inventory-checklist">Inventory checklist</a></li><li class="l2"><a href="#mapping-patterns">Mapping patterns</a></li><li class="l2"><a href="#migration-hazards-learned-in-the-pilot-adoption">Migration hazards (learned in the pilot adoption)</a></li><li class="l2"><a href="#common-starting-points">Common starting points</a></li></ul></details>
 
 <h2 id="inventory-checklist">Inventory checklist</h2>

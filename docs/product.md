@@ -20,7 +20,8 @@ mechanically, so drift is caught while the agent is still editing and again at c
   as the user's free-form inbox. Only the backlog, archive, decisions, roadmap and index
   have fixed names — a project keeps its own pages — and `[site] nav` sets the sidebar
   order. `[site] extra` renders Markdown that must live elsewhere (a skill's own files,
-  a README) into the same site.
+  a README) into the same site, in named groups that say what they are and where each
+  file lives.
 - **Skill workflows**: init (new project), adopt (migrate existing docs, with an approved
   mapping), triage (inbox → backlog with the user), update (re-vendor the tool and
   refresh the project's CLAUDE.md duties).

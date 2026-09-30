@@ -44,6 +44,15 @@ def test_pre_commit_renders_extra_files_from_the_index(repo):
     assert "Staged text." in html and "Unstaged text." not in html
 
 
+def test_pre_commit_exports_named_extra_groups(repo):
+    write(repo, "docs/pmdocs.toml",
+          '[site]\ntitle = "demo"\n\n[[site.extra]]\ngroup = "G"\npaths = ["skill/*.md"]\n')
+    write(repo, "skill/SKILL.md", "# Skill\n\nStaged.\n")
+    git(repo, "add", "-A")
+    assert pmdocs.hook_pre_commit(repo) == 0
+    assert "Staged." in git(repo, "show", ":docs/site/extra/skill/SKILL.html")
+
+
 def test_pre_commit_blocks_on_error(repo, capsys):
     write(repo, "docs/architecture.md", "# no frontmatter\n")
     git(repo, "add", "-A")

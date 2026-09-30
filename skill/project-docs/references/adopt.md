@@ -1,3 +1,8 @@
+---
+title: Adoption playbook
+summary: How to migrate a project that already has docs, TODO files or hooks — the inventory checklist, mapping patterns, and hazards learned in real migrations. The skill loads it for adopt.
+---
+
 # Adopting project-docs in an existing project
 
 ## Inventory checklist

@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["markdown-it-py>=3.0", "pyyaml>=6.0"]
 # ///
-"""pmdocs 0.1.6 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
+"""pmdocs 0.1.7 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
 
 Keeps a project's docs and work status current: renders docs/ to docs/site/, generates
 docs/roadmap.md, validates frontmatter/backlog/links, detects drift and staleness, and
@@ -33,7 +33,7 @@ from urllib.parse import quote, unquote
 import yaml
 from markdown_it import MarkdownIt
 
-VERSION = "0.1.6"
+VERSION = "0.1.7"
 
 
 class PmdocsError(Exception):
@@ -121,11 +121,35 @@ class Config:
     coverage_exclude: list
     # [site] nav: page paths and group names in sidebar order (optional, may be partial).
     nav: list
-    # [site] extra: globs of Markdown outside docs/ to render too (a "Reference" group).
+    # [site] extra: Markdown outside docs/ to render too, as ExtraGroups.
     extra: list
     # Where links that leave docs/ are resolved. Differs from root only when building
     # from an export of the index (the pre-commit hook).
     outside_root: Path
+
+
+@dataclass
+class ExtraGroup:
+    group: str   # sidebar heading
+    about: str   # shown on each page of the group ("" for none)
+    paths: list  # repo-relative globs
+
+
+def parse_extra(raw) -> list:
+    """[site] extra is a list of globs (one "Reference" group) or [[site.extra]] tables
+    with group / about / paths. Plain globs and tables may be mixed."""
+    groups, plain = [], []
+    for item in raw:
+        if isinstance(item, str):
+            plain.append(norm(item))
+        elif isinstance(item, dict):
+            groups.append(ExtraGroup(str(item.get("group") or "Reference"), str(item.get("about") or ""),
+                                     [norm(p) for p in item.get("paths", [])]))
+        else:
+            raise PmdocsError(f"[site] extra entries must be globs or tables, not {item!r}")
+    if plain:
+        groups.insert(0, ExtraGroup("Reference", "", plain))
+    return groups
 
 
 def load_config(root: Path, outside_root: Path | None = None) -> Config:
@@ -146,7 +170,7 @@ def load_config(root: Path, outside_root: Path | None = None) -> Config:
         coverage_include=[norm(p) for p in cov.get("include", [])],
         coverage_exclude=[norm(p) for p in cov.get("exclude", [])],
         nav=[norm(p) for p in site.get("nav", [])],
-        extra=[norm(p) for p in site.get("extra", [])],
+        extra=parse_extra(site.get("extra", [])),
         outside_root=Path(outside_root) if outside_root else root,
     )
 
@@ -328,10 +352,19 @@ def _glob_base(pattern: str) -> str:
     return head.rsplit("/", 1)[0] if "/" in head else ""
 
 
+def extra_patterns(cfg: Config) -> list:
+    return [p for g in cfg.extra for p in g.paths]
+
+
+def extra_group(cfg: Config, rel: str):
+    """The first ExtraGroup whose globs match rel, or None."""
+    return next((g for g in cfg.extra if any_match(rel, g.paths)), None)
+
+
 def extra_files(cfg: Config) -> list:
     """Markdown outside docs/ that [site] extra asks to render, in stable order."""
     found = set()
-    for pattern in cfg.extra:
+    for pattern in extra_patterns(cfg):
         base = cfg.root / _glob_base(pattern)
         if not base.is_dir():
             continue
@@ -878,6 +911,7 @@ h1{margin-top:0;line-height:1.2}
 h2{margin-top:2.2rem;padding-bottom:.25rem;border-bottom:1px solid var(--line)}
 .summary{color:var(--muted);font-size:1.05rem;margin-top:-.5rem}
 .meta{font-size:.85rem;color:var(--muted)}
+.about{font-size:.9rem;border-left:3px solid var(--accent);padding:.1rem .75rem;margin:.5rem 0}
 .badge{display:inline-block;padding:0 .5rem;border-radius:999px;border:1px solid var(--line);font-weight:600}
 .s-shipped,.s-done{background:#d9f0dc;color:#1d4d24}
 .s-in-progress,.s-approved{background:#dbe8f7;color:#1d3a5c}
@@ -947,7 +981,8 @@ def _title(page: Page) -> str:
 
 def nav_group_of(model: Model, rel: str) -> str:
     if is_extra(rel):
-        return "Reference"
+        g = extra_group(model.cfg, rel)
+        return g.group if g else "Reference"
     if rel in model.specs:
         return "Specs"
     if rel in model.plans:
@@ -970,10 +1005,20 @@ def _default_groups(model: Model) -> list:
     out = []
     for g in ["Docs", *sorted(k for k in groups if k not in ("Docs", "Specs", "Plans")), "Specs", "Plans"]:
         if g in groups:
-            items = (sorted(groups[g], key=lambda x: x[0], reverse=True) if g in ("Specs", "Plans")
-                     else sorted(groups[g], key=page_key))
+            if g in ("Specs", "Plans"):
+                items = sorted(groups[g], key=lambda x: x[0], reverse=True)
+            elif all(is_extra(rel) for rel, _ in groups[g]):
+                items = sorted(groups[g], key=lambda x: _extra_key(model.cfg, x[0]))
+            else:
+                items = sorted(groups[g], key=page_key)
             out.append((g, items))
     return out
+
+
+def _extra_key(cfg: Config, rel: str):
+    """Extra pages keep the order their globs are listed in (then by path)."""
+    patterns = extra_patterns(cfg)
+    return (next((i for i, p in enumerate(patterns) if glob_match(rel, p)), len(patterns)), rel)
 
 
 def nav_groups(model: Model) -> list:
@@ -1082,6 +1127,16 @@ def render_page(page: Page, model: Model, nav) -> str:
         toc = f'<details class="toc"><summary>On this page</summary><ul>{entries}</ul></details>\n'
     meta = render_meta(page, model)
     summary = (page.meta or {}).get("summary") or (page.meta or {}).get("description")
+    provenance = ""
+    if is_extra(page.rel):
+        # Say where an extra page lives and why it is here, so it isn't mistaken for docs.
+        group = extra_group(model.cfg, page.rel)
+        href = quote(posixpath.relpath(page.rel, here), safe="/")
+        if group and group.about:
+            provenance += f'<p class="about">{html.escape(group.about)}</p>\n'
+        provenance += (f'<p class="meta source">Source: <a href="{html.escape(href)}">'
+                       f"<code>{html.escape(page.rel)}</code></a> — outside <code>docs/</code>, "
+                       "rendered here for reading.</p>\n")
     return PAGE.substitute(
         banner=f"<!-- GENERATED by scripts/pmdocs.py from {page.rel} — do not edit by hand -->",
         title=html.escape(_title(page)),
@@ -1089,7 +1144,7 @@ def render_page(page: Page, model: Model, nav) -> str:
         css=CSS,
         home=html.escape(posixpath.relpath(f"{SITE_DIR}/index.html", here)),
         nav="\n".join(nav_html),
-        summary=f'<p class="summary">{html.escape(str(summary))}</p>\n' if summary else "",
+        summary=(f'<p class="summary">{html.escape(str(summary))}</p>\n' if summary else "") + provenance,
         meta=f'<p class="meta">{meta}</p>\n' if meta else "",
         toc=toc,
         content=body,
@@ -1217,7 +1272,7 @@ def hook_pre_commit(root: Path, today: str | None = None) -> int:
         git(root, "add", "--", *sorted(set(touched)))
     with tempfile.TemporaryDirectory(prefix="pmdocs-") as tmp:
         tmp = Path(tmp)
-        export_index(root, tmp, cfg.extra)
+        export_index(root, tmp, extra_patterns(cfg))
         if not (tmp / CONFIG_REL).is_file():
             print(f"pmdocs: {CONFIG_REL} is not in the index yet; skipping", file=sys.stderr)
             return 0

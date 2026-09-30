@@ -181,6 +181,46 @@ def test_extra_files_need_no_frontmatter_but_links_are_checked(repo):
     assert [f.msg for f in pmdocs.check_links(model)] == ["broken link missing.md"]
 
 
+GROUP_CONFIG = ('[site]\ntitle = "demo"\nnav = ["docs/index.md", "The skill"]\n\n'
+                '[[site.extra]]\ngroup = "The skill"\n'
+                'about = "The skill\'s own files, rendered for reading."\n'
+                'paths = ["skill/*.md", "skill/references/*.md"]\n')
+
+
+def test_extra_page_shows_its_source(repo):
+    with_extra(repo)
+    pmdocs.build(cfg(repo))
+    guide = read(repo, "docs/site/extra/skill/references/guide.html")
+    assert ('Source: <a href="../../../../../skill/references/guide.md">'
+            "<code>skill/references/guide.md</code></a>") in guide
+    assert "outside <code>docs/</code>" in guide
+
+
+def test_named_extra_group_with_about(repo):
+    with_extra(repo)
+    write(repo, "docs/pmdocs.toml", GROUP_CONFIG)
+    model = pmdocs.load_model(cfg(repo))
+    assert pmdocs.validate(model) == []  # "The skill" is a valid nav group
+    pmdocs.build(cfg(repo))
+    index = read(repo, "docs/site/index.html")
+    flat = [h or p for h, p in nav_entries(index)]
+    assert flat[:3] == ["Docs", "Demo", "The skill"] and "Reference" not in flat
+    skill = read(repo, "docs/site/extra/skill/SKILL.html")
+    assert '<p class="about">The skill&#x27;s own files, rendered for reading.</p>' in skill
+
+
+def test_extra_group_pages_follow_the_listed_path_order(repo):
+    with_extra(repo)
+    write(repo, "skill/references/another.md", "# Another\n")
+    write(repo, "docs/pmdocs.toml", GROUP_CONFIG.replace(
+        'paths = ["skill/*.md", "skill/references/*.md"]',
+        'paths = ["skill/references/guide.md", "skill/*.md", "skill/references/*.md"]'))
+    pmdocs.build(cfg(repo))
+    flat = [h or p for h, p in nav_entries(read(repo, "docs/site/index.html"))]
+    start = flat.index("The skill") + 1
+    assert flat[start:start + 3] == ["The guide", "my-skill", "Another"]
+
+
 def test_nav_can_place_the_reference_group(repo):
     with_extra(repo)
     write(repo, "docs/pmdocs.toml", EXTRA_CONFIG.replace("extra =", 'nav = ["Reference", "docs/index.md"]\nextra ='))
