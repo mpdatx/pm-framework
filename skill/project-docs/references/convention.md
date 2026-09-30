@@ -36,7 +36,8 @@ Only `backlog.md`, `backlog-archive.md`, `decisions.md`, `roadmap.md` (generated
 `index.md` (the site's home) have fixed names; every other page is the project's own.
 To control the sidebar fully — including the generated roadmap and the Specs/Plans
 groups — list pages and group names in `[site] nav` in `pmdocs.toml`. The list may be
-partial; unlisted pages follow in the default order. An entry that is neither a page nor
+partial; unlisted pages follow in the default order. Pages listed after a group start a
+new, divided section rather than joining that group. An entry that is neither a page nor
 a group is an ERROR.
 
 Markdown that must live outside `docs/` (a skill's own files, a README, an ADR folder)

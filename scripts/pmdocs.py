@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["markdown-it-py>=3.0", "pyyaml>=6.0"]
 # ///
-"""pmdocs 0.1.7 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
+"""pmdocs 0.1.8 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
 
 Keeps a project's docs and work status current: renders docs/ to docs/site/, generates
 docs/roadmap.md, validates frontmatter/backlog/links, detects drift and staleness, and
@@ -33,7 +33,7 @@ from urllib.parse import quote, unquote
 import yaml
 from markdown_it import MarkdownIt
 
-VERSION = "0.1.7"
+VERSION = "0.1.8"
 
 
 class PmdocsError(Exception):
@@ -904,6 +904,7 @@ nav.side{background:var(--side);border-right:1px solid var(--line);padding:1.25r
 nav.side .site{display:block;font-weight:700;color:var(--fg);text-decoration:none;margin-bottom:1rem}
 nav.side h2{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:1.25rem 0 .35rem;border:0;padding:0}
 nav.side ul{list-style:none;margin:0;padding:0}
+nav.side ul.continued{border-top:1px solid var(--line);margin-top:.75rem;padding-top:.5rem}
 nav.side li a{display:block;padding:.15rem .4rem;border-radius:4px;color:var(--fg);text-decoration:none}
 nav.side li a[aria-current]{background:var(--line);font-weight:600}
 main{max-width:52rem;padding:2rem 2.5rem 4rem}
@@ -1113,7 +1114,9 @@ def render_page(page: Page, model: Model, nav) -> str:
     here = posixpath.dirname(site_path(page.rel))
     nav_html = []
     for group, items in nav:
-        nav_html.append((f"<h2>{html.escape(group)}</h2>" if group else "") + "<ul>")
+        # A headless run (pages listed after a group in [site] nav) gets a divider, so it
+        # doesn't read as part of the group above it.
+        nav_html.append(f"<h2>{html.escape(group)}</h2><ul>" if group else '<ul class="continued">')
         for rel, p in items:
             href = quote(posixpath.relpath(site_path(rel), here), safe="/")
             current = ' aria-current="page"' if rel == page.rel else ""

@@ -139,6 +139,8 @@ def test_nav_run_after_a_group_has_no_heading(repo):
     nav = nav_of(read(repo, "docs/site/index.html"))
     between = nav.split(">X</a>", 1)[1].split(">Backlog archive</a>", 1)[0]
     assert "<h2>" not in between
+    # ...but it is visibly a new section, not a continuation of the group above it
+    assert '<ul class="continued">' in between
 
 
 def test_nav_unknown_entry_is_error(repo):
