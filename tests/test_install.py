@@ -140,6 +140,13 @@ def test_dev_install_says_so(tmp_path):
     assert "(dev" in inst.install(tmp_path / "project-docs", dev=True)
 
 
+def test_installer_is_a_standalone_script():
+    # PEP 723 metadata with no dependencies: `uv run install.py` then runs it in isolation
+    # instead of building the project's dev environment first.
+    head = (REPO / "install.py").read_text(encoding="utf-8").split('"""', 1)[0]
+    assert "# /// script" in head and "# dependencies = []" in head and "# ///\n" in head
+
+
 def test_default_dest():
     inst = load()
     assert inst.default_dest().parts[-3:] == (".claude", "skills", "project-docs")

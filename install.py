@@ -1,6 +1,12 @@
+# /// script
+# requires-python = ">=3.8"
+# dependencies = []
+# ///
+# Standalone on purpose: with this metadata `uv run install.py` runs in isolation instead
+# of first building the project's dev environment (pytest etc.), which installing never needs.
 """Install the project-docs skill into ~/.claude/skills/project-docs.
 
-    uv run install.py              # link the latest release (.release/, made by scripts/release.py)
+    uv run install.py              # link the checkout (or, in a maintainer's clone, the release)
     uv run install.py --dev        # link this working tree instead: edits are live immediately
     uv run install.py --copy       # plain copy (re-run to refresh)
     uv run install.py --uninstall
