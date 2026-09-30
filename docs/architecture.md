@@ -78,9 +78,11 @@ release". Bump `VERSION` in `tool/pmdocs.py` once per release, not per change.
 a symlink where the OS allows it, a directory junction (created through the Win32 API,
 never a shell) on Windows without symlink privilege, or a marked copy with `--copy`. It
 refuses to replace or remove a directory it did not create. With no `.release/`, it
-links the checkout if this is a user's clone of the published repository (no `release`
-branch, no `v*` tags — the checkout *is* a release), and refuses with instructions in a
-maintainer's clone, so B08's guarantee holds there.
+links the checkout if this is a user's clone of the published repository — the checkout
+*is* a release — and refuses with instructions in a maintainer's clone, so B08's
+guarantee holds there. A maintainer's clone is recognised by its local `release` branch,
+which only `release.py` creates and which is never pushed; version tags don't count,
+because they are published and arrive with every clone.
 
 ## Code pointers
 

@@ -177,9 +177,11 @@ other file in <code>docs/site/</code> is left alone — and stage exactly those 
 a symlink where the OS allows it, a directory junction (created through the Win32 API,
 never a shell) on Windows without symlink privilege, or a marked copy with <code>--copy</code>. It
 refuses to replace or remove a directory it did not create. With no <code>.release/</code>, it
-links the checkout if this is a user's clone of the published repository (no <code>release</code>
-branch, no <code>v*</code> tags — the checkout <em>is</em> a release), and refuses with instructions in a
-maintainer's clone, so B08's guarantee holds there.</p>
+links the checkout if this is a user's clone of the published repository — the checkout
+<em>is</em> a release — and refuses with instructions in a maintainer's clone, so B08's
+guarantee holds there. A maintainer's clone is recognised by its local <code>release</code> branch,
+which only <code>release.py</code> creates and which is never pushed; version tags don't count,
+because they are published and arrive with every clone.</p>
 <h2 id="code-pointers">Code pointers</h2>
 <table>
 <thead>

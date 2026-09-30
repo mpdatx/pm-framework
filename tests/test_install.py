@@ -103,7 +103,7 @@ def test_default_install_without_a_release_explains(tmp_path, monkeypatch):
 
 
 def test_fresh_clone_without_release_links_the_checkout(tmp_path, monkeypatch):
-    # a user's clone of the public repo: no .release/, no release branch, no v* tags —
+    # a user's clone of the public repo: no .release/, no release branch (tags may exist) —
     # the checkout itself is the published version
     inst = load()
     monkeypatch.setattr(inst, "RELEASE_SRC", tmp_path / "nope")
@@ -125,9 +125,11 @@ def test_maintainer_clone_detection(tmp_path):
     git(r, "add", "a")
     git(r, "commit", "-q", "-m", "c")
     assert inst.maintainer_clone(r) is False
+    # published version tags arrive with every clone of the public repo, so they must
+    # NOT mark a maintainer's clone (they did, and fresh clones couldn't install)
     git(r, "tag", "v0.1.0")
-    assert inst.maintainer_clone(r) is True
-    git(r, "tag", "-d", "v0.1.0")
+    assert inst.maintainer_clone(r) is False
+    # only release.py creates the local `release` branch, and it is never pushed
     git(r, "branch", "release")
     assert inst.maintainer_clone(r) is True
     assert inst.maintainer_clone(tmp_path / "not-a-repo") is False

@@ -69,7 +69,7 @@ project's `VERSION` with the installed skill's and re-vendors if the skill is ne
 
 ## For maintainers
 
-In a clone where releases are cut (one with a `release` branch or `v*` tags), the
+In a clone where releases are cut (one with a local `release` branch), the
 installed skill links `.release/`, a worktree of the `release` branch, rather than your
 working tree. Unreleased work never reaches other projects.
 

@@ -65,15 +65,16 @@ def _link(src: Path, dest: Path) -> str:
 
 
 def maintainer_clone(repo: Path) -> bool:
-    """True where releases are cut (a `release` branch or `v*` tags exist). A user's clone
-    of the published repository has neither: its checkout is already a released version."""
-    def out(*args):
-        r = subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True)
-        return r.stdout.strip() if r.returncode == 0 else ""
+    """True where releases are cut: a local `release` branch exists. Only release.py creates
+    it and it is never pushed, so a user's clone of the published repository — whose
+    checkout is already a released version — never has one. Version tags are NOT a signal:
+    they are published, and arrive with every clone."""
     try:
-        return bool(out("branch", "--list", "release") or out("tag", "--list", "v*"))
+        r = subprocess.run(["git", "branch", "--list", "release"], cwd=repo,
+                           capture_output=True, text=True)
     except OSError:  # no git, or repo missing
         return False
+    return r.returncode == 0 and bool(r.stdout.strip())
 
 
 def install(dest: Path, copy: bool = False, dev: bool = False) -> str:

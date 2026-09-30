@@ -163,7 +163,7 @@ reference).</p>
 repository changes nothing in them until you run <strong>update</strong> there. It compares the
 project's <code>VERSION</code> with the installed skill's and re-vendors if the skill is newer.</p>
 <h2 id="for-maintainers">For maintainers</h2>
-<p>In a clone where releases are cut (one with a <code>release</code> branch or <code>v*</code> tags), the
+<p>In a clone where releases are cut (one with a local <code>release</code> branch), the
 installed skill links <code>.release/</code>, a worktree of the <code>release</code> branch, rather than your
 working tree. Unreleased work never reaches other projects.</p>
 <pre><code class="language-sh">uv run pytest                   # the suite
