@@ -34,6 +34,16 @@ def test_pre_commit_builds_from_index_not_worktree(repo):
     assert "Alpha." in html and "Beta." not in html
 
 
+def test_pre_commit_renders_extra_files_from_the_index(repo):
+    write(repo, "docs/pmdocs.toml", '[site]\ntitle = "demo"\nextra = ["skill/*.md"]\n')
+    write(repo, "skill/SKILL.md", "# Skill\n\nStaged text.\n")
+    git(repo, "add", "-A")
+    write(repo, "skill/SKILL.md", "# Skill\n\nUnstaged text.\n")
+    assert pmdocs.hook_pre_commit(repo) == 0
+    html = git(repo, "show", ":docs/site/extra/skill/SKILL.html")
+    assert "Staged text." in html and "Unstaged text." not in html
+
+
 def test_pre_commit_blocks_on_error(repo, capsys):
     write(repo, "docs/architecture.md", "# no frontmatter\n")
     git(repo, "add", "-A")

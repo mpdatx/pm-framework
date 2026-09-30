@@ -13,6 +13,7 @@ vendor tagged, tested versions — never work in progress on master.
 import argparse
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -63,11 +64,28 @@ def _link(src: Path, dest: Path) -> str:
     return "junction"
 
 
+def maintainer_clone(repo: Path) -> bool:
+    """True where releases are cut (a `release` branch or `v*` tags exist). A user's clone
+    of the published repository has neither: its checkout is already a released version."""
+    def out(*args):
+        r = subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True)
+        return r.stdout.strip() if r.returncode == 0 else ""
+    try:
+        return bool(out("branch", "--list", "release") or out("tag", "--list", "v*"))
+    except OSError:  # no git, or repo missing
+        return False
+
+
 def install(dest: Path, copy: bool = False, dev: bool = False) -> str:
     dest = Path(dest)
-    src = DEV_SRC if dev else RELEASE_SRC
-    if not (src / "SKILL.md").is_file():
-        sys.exit(f"no release at {src.parent.parent}: run `uv run scripts/release.py` first "
+    if dev:
+        src, label = DEV_SRC, "dev working tree"
+    elif (RELEASE_SRC / "SKILL.md").is_file():
+        src, label = RELEASE_SRC, "release"
+    elif not maintainer_clone(REPO):
+        src, label = DEV_SRC, "checkout"  # a published clone: the checkout is the release
+    else:
+        sys.exit(f"no release at {RELEASE_SRC.parent.parent}: run `uv run scripts/release.py` first "
                  "(or `install.py --dev` to link the working tree)")
     if dest.exists() or dest.is_symlink():
         if is_link(dest):
@@ -83,7 +101,7 @@ def install(dest: Path, copy: bool = False, dev: bool = False) -> str:
         kind = "copy"
     else:
         kind = _link(src, dest)
-    return f"installed project-docs ({'dev working tree' if dev else 'release'}, {kind}) at {dest}"
+    return f"installed project-docs ({label}, {kind}) at {dest}"
 
 
 def uninstall(dest: Path) -> str:

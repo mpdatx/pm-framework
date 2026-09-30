@@ -148,6 +148,48 @@ def test_nav_unknown_entry_is_error(repo):
     assert has(f, "ERROR", "nav entry 'Spex' is not a page or a nav group")
 
 
+EXTRA_CONFIG = '[site]\ntitle = "demo"\nextra = ["skill/*.md", "skill/references/*.md"]\n'
+
+
+def with_extra(repo):
+    write(repo, "docs/pmdocs.toml", EXTRA_CONFIG)
+    write(repo, "skill/SKILL.md", "---\nname: my-skill\ndescription: Use when testing.\n---\n\n# My skill\n\nBody.\n")
+    write(repo, "skill/references/guide.md", "# The guide\n\n## Part one\n\nSee [the skill](../SKILL.md).\n")
+    write(repo, "docs/index.md", "---\ntitle: Demo\n---\n\n[guide](../skill/references/guide.md#part-one)\n")
+
+
+def test_extra_files_are_rendered_in_a_reference_group(repo):
+    with_extra(repo)
+    pmdocs.build(cfg(repo))
+    guide = read(repo, "docs/site/extra/skill/references/guide.html")
+    assert "<h1>The guide</h1>" in guide                       # title from the first H1
+    assert 'href="../SKILL.html"' in guide                      # extra-to-extra link
+    skill = read(repo, "docs/site/extra/skill/SKILL.html")
+    assert "<h1>my-skill</h1>" in skill                         # title from frontmatter name
+    assert '<p class="summary">Use when testing.</p>' in skill  # description as summary
+    index = read(repo, "docs/site/index.html")
+    assert 'href="extra/skill/references/guide.html#part-one"' in index
+    flat = [h or p for h, p in nav_entries(index)]
+    assert flat.index("Reference") < flat.index("The guide")
+
+
+def test_extra_files_need_no_frontmatter_but_links_are_checked(repo):
+    with_extra(repo)
+    write(repo, "skill/references/broken.md", "# Broken\n\n[nope](missing.md)\n")
+    model = pmdocs.load_model(cfg(repo))
+    assert pmdocs.validate(model) == []
+    assert [f.msg for f in pmdocs.check_links(model)] == ["broken link missing.md"]
+
+
+def test_nav_can_place_the_reference_group(repo):
+    with_extra(repo)
+    write(repo, "docs/pmdocs.toml", EXTRA_CONFIG.replace("extra =", 'nav = ["Reference", "docs/index.md"]\nextra ='))
+    pmdocs.build(cfg(repo))
+    flat = [h or p for h, p in nav_entries(read(repo, "docs/site/index.html"))]
+    assert flat[:2] == ["Reference", "my-skill"]
+    assert pmdocs.validate(pmdocs.load_model(cfg(repo))) == []
+
+
 def test_orphans_removed(repo):
     write(repo, "docs/old.md", "---\ntitle: Old\n---\n")
     pmdocs.build(cfg(repo))

@@ -46,11 +46,17 @@ img,svg{max-width:100%}
 <nav class="side"><a class="site" href="index.html">pm-framework</a>
 <h2>Docs</h2><ul>
 <li><a href="index.html">Overview</a></li>
+<li><a href="install.html">Install</a></li>
 <li><a href="roadmap.html">Roadmap</a></li>
 <li><a href="backlog.html">Backlog</a></li>
 <li><a href="product.html" aria-current="page">Product</a></li>
 <li><a href="architecture.html">Architecture</a></li>
 <li><a href="decisions.html">Decisions</a></li>
+</ul>
+<h2>Reference</h2><ul>
+<li><a href="extra/skill/project-docs/references/adopt.html">Adopting project-docs in an existing project</a></li>
+<li><a href="extra/skill/project-docs/SKILL.html">project-docs</a></li>
+<li><a href="extra/skill/project-docs/references/convention.html">The project-docs convention</a></li>
 </ul>
 <h2>Specs</h2><ul>
 <li><a href="superpowers/specs/2026-09-30-project-docs-design.html">project-docs — a portable documentation and work-status convention</a></li>
@@ -75,7 +81,8 @@ mechanically, so drift is caught while the agent is still editing and again at c
 generated roadmap and HTML site; YAML frontmatter status on specs and plans; <code>TODO.md</code>
 as the user's free-form inbox. Only the backlog, archive, decisions, roadmap and index
 have fixed names — a project keeps its own pages — and <code>[site] nav</code> sets the sidebar
-order.</li>
+order. <code>[site] extra</code> renders Markdown that must live elsewhere (a skill's own files,
+a README) into the same site.</li>
 <li><strong>Skill workflows</strong>: init (new project), adopt (migrate existing docs, with an approved
 mapping), triage (inbox → backlog with the user), update (re-vendor the tool and
 refresh the project's CLAUDE.md duties).</li>

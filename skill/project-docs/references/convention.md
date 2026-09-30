@@ -34,6 +34,11 @@ groups — list pages and group names in `[site] nav` in `pmdocs.toml`. The list
 partial; unlisted pages follow in the default order. An entry that is neither a page nor
 a group is an ERROR.
 
+Markdown that must live outside `docs/` (a skill's own files, a README, an ADR folder)
+can join the site with `[site] extra` globs. Those pages render under
+`docs/site/extra/<path>.html` in a "Reference" nav group, need no frontmatter (the title
+falls back to `name`, then the first H1), and have their links checked like any page.
+
 ## Doc-map
 
 `[[map]]` entries in `pmdocs.toml` pair source globs (`paths`) with the pages that

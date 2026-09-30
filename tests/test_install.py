@@ -2,7 +2,7 @@ import importlib.util
 
 import pytest
 
-from helpers import REPO
+from helpers import REPO, git
 
 
 def load():
@@ -97,8 +97,40 @@ def test_default_install_links_the_release_worktree(tmp_path, monkeypatch):
 def test_default_install_without_a_release_explains(tmp_path, monkeypatch):
     inst = load()
     monkeypatch.setattr(inst, "RELEASE_SRC", tmp_path / "nope")
+    monkeypatch.setattr(inst, "maintainer_clone", lambda repo: True)
     with pytest.raises(SystemExit, match="scripts/release.py"):
         inst.install(tmp_path / "project-docs")
+
+
+def test_fresh_clone_without_release_links_the_checkout(tmp_path, monkeypatch):
+    # a user's clone of the public repo: no .release/, no release branch, no v* tags —
+    # the checkout itself is the published version
+    inst = load()
+    monkeypatch.setattr(inst, "RELEASE_SRC", tmp_path / "nope")
+    monkeypatch.setattr(inst, "maintainer_clone", lambda repo: False)
+    dest = tmp_path / "project-docs"
+    msg = inst.install(dest)
+    assert "(checkout," in msg
+    assert (dest / "SKILL.md").read_bytes() == (inst.DEV_SRC / "SKILL.md").read_bytes()
+
+
+def test_maintainer_clone_detection(tmp_path):
+    inst = load()
+    r = tmp_path / "r"
+    r.mkdir()
+    git(r, "init", "-q", "-b", "master")
+    git(r, "config", "user.email", "t@example.com")
+    git(r, "config", "user.name", "T")
+    (r / "a").write_text("a", encoding="utf-8")
+    git(r, "add", "a")
+    git(r, "commit", "-q", "-m", "c")
+    assert inst.maintainer_clone(r) is False
+    git(r, "tag", "v0.1.0")
+    assert inst.maintainer_clone(r) is True
+    git(r, "tag", "-d", "v0.1.0")
+    git(r, "branch", "release")
+    assert inst.maintainer_clone(r) is True
+    assert inst.maintainer_clone(tmp_path / "not-a-repo") is False
 
 
 def test_dev_install_says_so(tmp_path):

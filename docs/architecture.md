@@ -53,7 +53,7 @@ release". Bump `VERSION` in `tool/pmdocs.py` once per release, not per change.
 | git, drift, staleness | `changed_files`, `staleness`, `coverage`, `drift_static`, `drift_stale_progress`; staleness and coverage skip the tool's own `VENDORED` files |
 | fixes and check | archive closed items, add draft frontmatter, `cmd_check` |
 | roadmap | `render_roadmap` (deterministic: static drift only) |
-| site | markdown-it rendering, link rewriting, nav (default groups, or `[site] nav` order), collapsible TOC, `build` |
+| site | markdown-it rendering, link rewriting, nav (default groups, or `[site] nav` order), collapsible TOC, `[site] extra` pages under `site/extra/`, `build` |
 | hooks | `hook_pre_commit` (exit 10 blocks), `hook_post_edit`, `hook_stop` |
 | install-hooks | `core.hooksPath` and `.claude/settings.json` merge/removal |
 | cli | argparse; `cmd_*` dispatch; errors exit 2 |
@@ -77,8 +77,10 @@ release". Bump `VERSION` in `tool/pmdocs.py` once per release, not per change.
 (`.release/…`, or the working tree with `--dev`) into `~/.claude/skills/project-docs`:
 a symlink where the OS allows it, a directory junction (created through the Win32 API,
 never a shell) on Windows without symlink privilege, or a marked copy with `--copy`. It
-refuses to replace or remove a directory it did not create, and explains when no release
-exists yet.
+refuses to replace or remove a directory it did not create. With no `.release/`, it
+links the checkout if this is a user's clone of the published repository (no `release`
+branch, no `v*` tags — the checkout *is* a release), and refuses with instructions in a
+maintainer's clone, so B08's guarantee holds there.
 
 ## Code pointers
 

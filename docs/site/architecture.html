@@ -46,11 +46,17 @@ img,svg{max-width:100%}
 <nav class="side"><a class="site" href="index.html">pm-framework</a>
 <h2>Docs</h2><ul>
 <li><a href="index.html">Overview</a></li>
+<li><a href="install.html">Install</a></li>
 <li><a href="roadmap.html">Roadmap</a></li>
 <li><a href="backlog.html">Backlog</a></li>
 <li><a href="product.html">Product</a></li>
 <li><a href="architecture.html" aria-current="page">Architecture</a></li>
 <li><a href="decisions.html">Decisions</a></li>
+</ul>
+<h2>Reference</h2><ul>
+<li><a href="extra/skill/project-docs/references/adopt.html">Adopting project-docs in an existing project</a></li>
+<li><a href="extra/skill/project-docs/SKILL.html">project-docs</a></li>
+<li><a href="extra/skill/project-docs/references/convention.html">The project-docs convention</a></li>
 </ul>
 <h2>Specs</h2><ul>
 <li><a href="superpowers/specs/2026-09-30-project-docs-design.html">project-docs — a portable documentation and work-status convention</a></li>
@@ -129,7 +135,7 @@ release&quot;. Bump <code>VERSION</code> in <code>tool/pmdocs.py</code> once per
 </tr>
 <tr>
 <td>site</td>
-<td>markdown-it rendering, link rewriting, nav (default groups, or <code>[site] nav</code> order), collapsible TOC, <code>build</code></td>
+<td>markdown-it rendering, link rewriting, nav (default groups, or <code>[site] nav</code> order), collapsible TOC, <code>[site] extra</code> pages under <code>site/extra/</code>, <code>build</code></td>
 </tr>
 <tr>
 <td>hooks</td>
@@ -163,8 +169,10 @@ other file in <code>docs/site/</code> is left alone — and stage exactly those 
 (<code>.release/…</code>, or the working tree with <code>--dev</code>) into <code>~/.claude/skills/project-docs</code>:
 a symlink where the OS allows it, a directory junction (created through the Win32 API,
 never a shell) on Windows without symlink privilege, or a marked copy with <code>--copy</code>. It
-refuses to replace or remove a directory it did not create, and explains when no release
-exists yet.</p>
+refuses to replace or remove a directory it did not create. With no <code>.release/</code>, it
+links the checkout if this is a user's clone of the published repository (no <code>release</code>
+branch, no <code>v*</code> tags — the checkout <em>is</em> a release), and refuses with instructions in a
+maintainer's clone, so B08's guarantee holds there.</p>
 <h2 id="code-pointers">Code pointers</h2>
 <table>
 <thead>

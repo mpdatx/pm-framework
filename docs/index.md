@@ -16,11 +16,13 @@ agent-built projects that had each grown part of this independently.
 
 | You want to… | Read |
 |---|---|
+| Install the skill and use it in a project | [Install](install.md) |
 | See what is planned and in flight | [Roadmap](roadmap.md), [Backlog](backlog.md) |
 | Understand what it does and for whom | [Product](product.md) |
 | Change the tool, installer or asset sync | [Architecture](architecture.md) |
 | Know why something is the way it is | [Decisions](decisions.md) |
 | Read the full design | [Design spec](superpowers/specs/2026-09-30-project-docs-design.md) |
+| Read the skill itself and its references | [SKILL.md](../skill/project-docs/SKILL.md), [convention](../skill/project-docs/references/convention.md), [adopting](../skill/project-docs/references/adopt.md) |
 | See what has been finished | [Backlog archive](backlog-archive.md) |
 
 ## About these docs

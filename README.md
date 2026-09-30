@@ -10,12 +10,15 @@ architecture docs, product docs and work status current.
 
 ## Install the skill
 
-    uv run scripts/release.py  # first time only, if .release/ doesn't exist yet
-    uv run install.py          # links the released skill into ~/.claude/skills/
-    uv run install.py --copy   # or copy it
+Needs `git`, [`uv`](https://docs.astral.sh/uv/) and Claude Code.
+
+    git clone <this repository> pm-framework
+    cd pm-framework
+    uv run install.py          # links the skill into ~/.claude/skills/project-docs
 
 Then, in any project, ask Claude to set up project-docs (init), migrate existing docs
-(adopt), or triage `TODO.md`.
+(adopt), or triage `TODO.md`. Full instructions — options, what adoption adds, keeping
+projects current, uninstalling — are in [docs/install.md](docs/install.md).
 
 ## Develop
 
@@ -23,5 +26,8 @@ Then, in any project, ask Claude to set up project-docs (init), migrate existing
     uv run scripts/sync_assets.py   # after changing tool/
     uv run scripts/release.py       # ship: bump VERSION in tool/pmdocs.py first
     uv run install.py --dev         # try unreleased skill changes (re-run without --dev after)
+
+In a maintainer's clone the installer links the released skill (`.release/`), never the
+working tree; see [docs/architecture.md](docs/architecture.md#releases).
 
 Docs: [docs/index.md](docs/index.md) (rendered: `docs/site/index.html`).
