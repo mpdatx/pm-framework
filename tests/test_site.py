@@ -223,6 +223,36 @@ def test_extra_group_pages_follow_the_listed_path_order(repo):
     assert flat[start:start + 3] == ["The guide", "my-skill", "Another"]
 
 
+def test_root_readme_is_rendered_by_default(repo):
+    write(repo, "README.md", "# Demo repo\n\nSee [the docs](docs/index.md).\n")
+    pmdocs.build(cfg(repo))
+    readme = read(repo, "docs/site/extra/README.html")
+    assert "<h1>Demo repo</h1>" in readme and 'href="../index.html"' in readme
+    flat = [h or p for h, p in nav_entries(read(repo, "docs/site/index.html"))]
+    assert flat[flat.index("Repository") + 1] == "Demo repo"
+
+
+def test_readme_can_be_turned_off(repo):
+    write(repo, "README.md", "# Demo repo\n")
+    write(repo, "docs/pmdocs.toml", '[site]\ntitle = "demo"\nreadme = false\n')
+    pmdocs.build(cfg(repo))
+    assert not (repo / "docs/site/extra/README.html").exists()
+
+
+def test_readme_listed_explicitly_is_not_duplicated(repo):
+    write(repo, "README.md", "# Demo repo\n")
+    write(repo, "docs/pmdocs.toml",
+          '[site]\ntitle = "demo"\n\n[[site.extra]]\ngroup = "Front page"\npaths = ["README.md"]\n')
+    pmdocs.build(cfg(repo))
+    flat = [h or p for h, p in nav_entries(read(repo, "docs/site/index.html"))]
+    assert "Front page" in flat and "Repository" not in flat and flat.count("Demo repo") == 1
+
+
+def test_no_readme_no_group(repo):
+    pmdocs.build(cfg(repo))
+    assert "Repository" not in read(repo, "docs/site/index.html")
+
+
 def test_nav_can_place_the_reference_group(repo):
     with_extra(repo)
     write(repo, "docs/pmdocs.toml", EXTRA_CONFIG.replace("extra =", 'nav = ["Reference", "docs/index.md"]\nextra ='))

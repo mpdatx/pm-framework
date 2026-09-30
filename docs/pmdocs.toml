@@ -5,11 +5,6 @@ nav = ["docs/index.md", "Repository", "docs/install.md", "docs/roadmap.md", "doc
        "docs/product.md", "docs/architecture.md", "docs/decisions.md", "The skill", "Specs",
        "docs/backlog-archive.md"]
 
-[[site.extra]]
-group = "Repository"
-about = "The repository's README — the front page on the code host — rendered here so the site is complete."
-paths = ["README.md"]
-
 # The skill's own Markdown lives in skill/ (the skill reads it there); render it too.
 [[site.extra]]
 group = "The skill"

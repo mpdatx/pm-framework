@@ -51,7 +51,11 @@ about = "Architecture decision records, kept beside the code in adr/."
 paths = ["adr/*.md"]
 ```
 
-(A plain list of globs, `extra = ["README.md"]`, is one untitled "Reference" group.)
+(A plain list of globs, `extra = ["CHANGELOG.md"]`, is one untitled "Reference" group.)
+
+By convention the root `README.md` is rendered without any configuration, as a
+"Repository" group. `readme = false` under `[site]` turns that off; listing `README.md`
+in a `[[site.extra]]` group of your own replaces the default name and text.
 Pages render under `docs/site/extra/<path>.html`, in the listed order. Each shows its
 group's `about` text and a "Source:" line naming the file, so a reader knows where it
 lives. They need no frontmatter — the title falls back to `name`, then the first H1 —

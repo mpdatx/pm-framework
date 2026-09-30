@@ -20,6 +20,9 @@ summary: How to migrate a project that already has docs, TODO files or hooks —
 - [ ] Work tracking: `TODO.md`, backlog files, milestone plans, status tables in index pages.
 - [ ] Decision logs: numbering scheme and heading format.
 - [ ] Spec/plan headers: `**Status:**`, `**Date:**`, `**Spec:**` lines.
+- [ ] Markdown outside `docs/` (`git ls-files "*.md"`): README (rendered by default),
+  CONTRIBUTING, CHANGELOG, `adr/`, a skill's own files. Decide per folder: a named
+  `[[site.extra]]` group in the site, or left out.
 - [ ] CLAUDE.md rules about docs — they will be replaced by the snippet; note anything project-specific to keep.
 
 ## Mapping patterns

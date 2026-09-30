@@ -42,6 +42,12 @@ pre-commit hook (blocks on doc errors, warns on staleness) and from Claude Code 
    each marker once its section is written. Ask the user for anything the code can't tell you.
 6. Write the doc-map in `docs/pmdocs.toml`: one `[[map]]` per area of the source tree,
    pointing at the page that describes it. Set `[coverage] include` to the source roots.
+   Then decide what else joins the site. List the Markdown outside `docs/`
+   (`git ls-files "*.md"`, minus `docs/` and `TODO.md`), grouped by folder. The root
+   README is rendered by default (`readme = false` under `[site]` turns it off). Propose
+   a `[[site.extra]]` group — name, one-sentence `about`, paths — for any other set worth
+   reading in the site (e.g. `adr/`, `CONTRIBUTING.md`), and ask the user which to include.
+   Leaving files out is a fine answer.
 7. Append `SKILL_DIR/assets/claude-md-snippet.md` to the project's `CLAUDE.md` (create
    it if absent).
 8. Run `uv run scripts/pmdocs.py install-hooks`, then `build`, then `check`. Fix every
@@ -56,9 +62,13 @@ mapping patterns from real migrations.
 1. Inventory, read-only: doc files and their roles; HTML builders; git hooks
    (`git config core.hooksPath`, `.git/hooks`, husky/lefthook/pre-commit configs); Claude
    hooks in `.claude/settings*.json`; TODO/backlog files; decision logs; spec and plan
-   headers (`**Status:**` lines); documentation rules in `CLAUDE.md`.
+   headers (`**Status:**` lines); documentation rules in `CLAUDE.md`; Markdown outside
+   `docs/` (`git ls-files "*.md"`), grouped by folder.
 2. Propose a mapping table — every existing artifact → its fate (kept, converted, merged,
    excluded, retired) — and **stop for the user's approval**. Touch nothing before it.
+   Markdown outside `docs/` gets a row per folder: rendered in the site as a
+   `[[site.extra]]` group (proposed name and `about`), or left out. The root README is in
+   by default; say so, and offer `readme = false`.
 3. Work on a branch: `git switch -c pmdocs-adopt`.
 4. Migrate per the approved table:
    - Every page under `docs/` gets frontmatter, or is listed in `[paths] exclude`.
@@ -68,6 +78,8 @@ mapping patterns from real migrations.
      (closed ones → `docs/backlog-archive.md`); loose ideas stay in `TODO.md` for triage.
      If the file is large, ask the user which they prefer.
    - Decision logs → `docs/decisions.md` as `## Dnn. Title`, keeping existing numbers.
+   - Approved outside-`docs/` groups → `[[site.extra]]` entries in `docs/pmdocs.toml`
+     (they stay where they are; the site renders them with their source path shown).
 5. Retire conflicting tooling (old builders, hooks, `core.hooksPath`) only with explicit
    approval.
 6. Run init steps 2, 3, 4, 6, 7 and 8, in that order. In step 4 copy only the templates

@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["markdown-it-py>=3.0", "pyyaml>=6.0"]
 # ///
-"""pmdocs 0.1.8 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
+"""pmdocs 0.1.9 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
 
 Keeps a project's docs and work status current: renders docs/ to docs/site/, generates
 docs/roadmap.md, validates frontmatter/backlog/links, detects drift and staleness, and
@@ -33,7 +33,7 @@ from urllib.parse import quote, unquote
 import yaml
 from markdown_it import MarkdownIt
 
-VERSION = "0.1.8"
+VERSION = "0.1.9"
 
 
 class PmdocsError(Exception):
@@ -152,6 +152,18 @@ def parse_extra(raw) -> list:
     return groups
 
 
+README_GROUP = ExtraGroup("Repository", "The repository's README — its front page on the code host.",
+                          ["README.md"])
+
+
+def with_readme(groups: list, enabled) -> list:
+    """Convention: the root README joins the site unless `[site] readme = false` or a
+    [[site.extra]] group already lists it (that group's name and text then win)."""
+    if enabled is False or any(glob_match("README.md", p) for g in groups for p in g.paths):
+        return groups
+    return [*groups, README_GROUP]
+
+
 def load_config(root: Path, outside_root: Path | None = None) -> Config:
     root = Path(root)
     try:
@@ -170,7 +182,7 @@ def load_config(root: Path, outside_root: Path | None = None) -> Config:
         coverage_include=[norm(p) for p in cov.get("include", [])],
         coverage_exclude=[norm(p) for p in cov.get("exclude", [])],
         nav=[norm(p) for p in site.get("nav", [])],
-        extra=parse_extra(site.get("extra", [])),
+        extra=with_readme(parse_extra(site.get("extra", [])), site.get("readme", True)),
         outside_root=Path(outside_root) if outside_root else root,
     )
 

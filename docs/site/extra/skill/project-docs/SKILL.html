@@ -137,7 +137,13 @@ project root, only if absent.</li>
 <li>Fill every <code>pmdocs:fill</code> marker from the actual code — read it; don't invent. Remove
 each marker once its section is written. Ask the user for anything the code can't tell you.</li>
 <li>Write the doc-map in <code>docs/pmdocs.toml</code>: one <code>[[map]]</code> per area of the source tree,
-pointing at the page that describes it. Set <code>[coverage] include</code> to the source roots.</li>
+pointing at the page that describes it. Set <code>[coverage] include</code> to the source roots.
+Then decide what else joins the site. List the Markdown outside <code>docs/</code>
+(<code>git ls-files &quot;*.md&quot;</code>, minus <code>docs/</code> and <code>TODO.md</code>), grouped by folder. The root
+README is rendered by default (<code>readme = false</code> under <code>[site]</code> turns it off). Propose
+a <code>[[site.extra]]</code> group — name, one-sentence <code>about</code>, paths — for any other set worth
+reading in the site (e.g. <code>adr/</code>, <code>CONTRIBUTING.md</code>), and ask the user which to include.
+Leaving files out is a fine answer.</li>
 <li>Append <code>SKILL_DIR/assets/claude-md-snippet.md</code> to the project's <code>CLAUDE.md</code> (create
 it if absent).</li>
 <li>Run <code>uv run scripts/pmdocs.py install-hooks</code>, then <code>build</code>, then <code>check</code>. Fix every
@@ -151,9 +157,13 @@ mapping patterns from real migrations.</p>
 <li>Inventory, read-only: doc files and their roles; HTML builders; git hooks
 (<code>git config core.hooksPath</code>, <code>.git/hooks</code>, husky/lefthook/pre-commit configs); Claude
 hooks in <code>.claude/settings*.json</code>; TODO/backlog files; decision logs; spec and plan
-headers (<code>**Status:**</code> lines); documentation rules in <code>CLAUDE.md</code>.</li>
+headers (<code>**Status:**</code> lines); documentation rules in <code>CLAUDE.md</code>; Markdown outside
+<code>docs/</code> (<code>git ls-files &quot;*.md&quot;</code>), grouped by folder.</li>
 <li>Propose a mapping table — every existing artifact → its fate (kept, converted, merged,
-excluded, retired) — and <strong>stop for the user's approval</strong>. Touch nothing before it.</li>
+excluded, retired) — and <strong>stop for the user's approval</strong>. Touch nothing before it.
+Markdown outside <code>docs/</code> gets a row per folder: rendered in the site as a
+<code>[[site.extra]]</code> group (proposed name and <code>about</code>), or left out. The root README is in
+by default; say so, and offer <code>readme = false</code>.</li>
 <li>Work on a branch: <code>git switch -c pmdocs-adopt</code>.</li>
 <li>Migrate per the approved table:
 <ul>
@@ -164,6 +174,8 @@ which status applies, ask.</li>
 (closed ones → <code>docs/backlog-archive.md</code>); loose ideas stay in <code>TODO.md</code> for triage.
 If the file is large, ask the user which they prefer.</li>
 <li>Decision logs → <code>docs/decisions.md</code> as <code>## Dnn. Title</code>, keeping existing numbers.</li>
+<li>Approved outside-<code>docs/</code> groups → <code>[[site.extra]]</code> entries in <code>docs/pmdocs.toml</code>
+(they stay where they are; the site renders them with their source path shown).</li>
 </ul>
 </li>
 <li>Retire conflicting tooling (old builders, hooks, <code>core.hooksPath</code>) only with explicit

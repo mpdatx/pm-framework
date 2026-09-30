@@ -41,6 +41,13 @@ def test_adopt_creates_config_and_doc_map_before_installing_hooks():
     assert "Run init steps 2, 3, 4, 6, 7 and 8" in adopt
 
 
+def test_init_and_adopt_surface_markdown_outside_docs():
+    body = pmdocs.read_text(SKILL / "SKILL.md")
+    for workflow in ("## init", "## adopt"):
+        section = body.split(workflow, 1)[1].split("\n## ", 1)[0]
+        assert "outside `docs/`" in section and "[[site.extra]]" in section, workflow
+
+
 def test_templates_pass_check(tmp_path):
     repo = tmp_path / "newproj"
     (repo / "docs").mkdir(parents=True)
