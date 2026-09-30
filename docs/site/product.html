@@ -16,6 +16,7 @@ nav.side .site{display:block;font-weight:700;color:var(--fg);text-decoration:non
 nav.side h2{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:1.25rem 0 .35rem;border:0;padding:0}
 nav.side ul{list-style:none;margin:0;padding:0}
 nav.side ul.continued{border-top:1px solid var(--line);margin-top:.75rem;padding-top:.5rem}
+nav.side ul.children{margin:.1rem 0 .3rem .75rem;padding-left:.5rem;border-left:1px solid var(--line);font-size:.85rem}
 nav.side li a{display:block;padding:.15rem .4rem;border-radius:4px;color:var(--fg);text-decoration:none}
 nav.side li a[aria-current]{background:var(--line);font-weight:600}
 main{max-width:52rem;padding:2rem 2.5rem 4rem}
@@ -46,27 +47,24 @@ img,svg{max-width:100%}
 <body>
 <div class="layout">
 <nav class="side"><a class="site" href="index.html">pm-framework</a>
-<h2>Docs</h2><ul>
-<li><a href="index.html">Overview</a></li>
-</ul>
-<h2>Repository</h2><ul>
-<li><a href="extra/README.html">pm-framework</a></li>
-</ul>
-<ul class="continued">
-<li><a href="install.html">Install</a></li>
+<ul>
+<li><a href="index.html">Overview</a><ul class="children"><li><a href="install.html">Install</a></li></ul></li>
 <li><a href="roadmap.html">Roadmap</a></li>
 <li><a href="backlog.html">Backlog</a></li>
 <li><a href="product.html" aria-current="page">Product</a></li>
 <li><a href="architecture.html">Architecture</a></li>
 <li><a href="decisions.html">Decisions</a></li>
 </ul>
+<h2>Specs</h2><ul>
+<li><a href="superpowers/specs/2026-09-30-project-docs-design.html">project-docs — a portable documentation and work-status convention</a></li>
+</ul>
 <h2>The skill</h2><ul>
 <li><a href="extra/skill/project-docs/SKILL.html">project-docs</a></li>
 <li><a href="extra/skill/project-docs/references/convention.html">Convention reference</a></li>
 <li><a href="extra/skill/project-docs/references/adopt.html">Adoption playbook</a></li>
 </ul>
-<h2>Specs</h2><ul>
-<li><a href="superpowers/specs/2026-09-30-project-docs-design.html">project-docs — a portable documentation and work-status convention</a></li>
+<h2>Repository</h2><ul>
+<li><a href="extra/README.html">pm-framework</a></li>
 </ul>
 <ul class="continued">
 <li><a href="backlog-archive.html">Backlog archive</a></li>
@@ -86,9 +84,10 @@ mechanically, so drift is caught while the agent is still editing and again at c
 <ul>
 <li><strong>Convention</strong>: <code>docs/</code> with product, architecture, decisions, backlog (+ archive),
 generated roadmap and HTML site; YAML frontmatter status on specs and plans; <code>TODO.md</code>
-as the user's free-form inbox. Only the backlog, archive, decisions, roadmap and index
-have fixed names — a project keeps its own pages — and <code>[site] nav</code> sets the sidebar
-order. <code>[site] extra</code> renders Markdown that must live elsewhere (a skill's own files,
+as the user's free-form inbox. Every project gets the same fixed sidebar — Overview,
+Roadmap, Backlog, Product, Architecture, Decisions — so work status is always one click
+away; a project keeps its own pages, attached under a category with <code>parent:</code>.
+<code>[site] extra</code> renders Markdown that must live elsewhere (a skill's own files,
 a README) into the same site, in named groups that say what they are and where each
 file lives. The root README is included by convention; init and adopt ask about the
 rest.</li>

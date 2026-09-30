@@ -79,3 +79,18 @@ branch plus tags gives a history of exactly what was shipped; nothing in the ski
 workflows had to change, because they already read from the installed directory.
 **Consequences.** Changes reach other projects only after `release.py`. Testing a skill
 change in another project before release needs `install.py --dev` (and a later re-install).
+
+## D09. A fixed sidebar; project pages attach with `parent:`
+
+**Context.** `[site] nav` let each project order its sidebar freely, and adopted
+projects' own pages could push the backlog and roadmap far down the list — the opposite
+of what the convention is for.
+**Decision.** The sidebar is fixed: Overview, Roadmap, Backlog, Product, Architecture,
+Decisions, then Specs, Plans, extra groups, "Other" and the archive. A project's pages
+nest under a category via `parent:` frontmatter; a page without one warns and goes
+under "Other". `[site] nav` is removed (an ERROR since 0.2.0).
+**Why.** Work status must be in the same, prominent place in every project; a
+project's own documentation still fits, as sub-pages of the categories it belongs to.
+Frontmatter rather than folders, so adoption moves no files and breaks no links.
+**Consequences.** Projects can order pages only among siblings (`order`). Updating to
+0.2.0 means deleting `nav` and giving each project page a parent.

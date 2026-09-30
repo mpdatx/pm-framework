@@ -94,60 +94,107 @@ def test_heading_ids_and_toc(repo):
     assert "<details class=\"toc\" open" not in page
 
 
-def test_nav_order_and_groups(repo):
-    write(repo, "docs/architecture.md", "---\ntitle: Architecture\norder: 20\n---\n")
-    write(repo, "docs/product.md", "---\ntitle: Product\norder: 10\n---\n")
+def outline(page_html):
+    """The sidebar as text: page titles (indented two spaces per nesting level),
+    '# Heading' for group headings, '---' for a divider."""
+    from html.parser import HTMLParser
+
+    class P(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.out, self.uls, self.in_h2, self.in_a = [], [], False, False
+
+        def handle_starttag(self, tag, attrs):
+            a = dict(attrs)
+            if tag == "ul":
+                self.uls.append(a.get("class", ""))
+                if a.get("class") == "continued":
+                    self.out.append("---")
+            self.in_h2 = self.in_h2 or tag == "h2"
+            self.in_a = self.in_a or (tag == "a" and "site" not in (a.get("class") or ""))
+
+        def handle_endtag(self, tag):
+            if tag == "ul":
+                self.uls.pop()
+            self.in_h2 = self.in_h2 and tag != "h2"
+            self.in_a = self.in_a and tag != "a"
+
+        def handle_data(self, data):
+            if self.in_h2:
+                self.out.append("# " + data)
+            elif self.in_a:
+                self.out.append("  " * self.uls.count("children") + data)
+
+    p = P()
+    p.feed(nav_of(page_html))
+    return p.out
+
+
+def tree_repo(repo):
+    for rel, fm in [("docs/backlog.md", "title: Backlog"),
+                    ("docs/backlog-archive.md", "title: Backlog archive"),
+                    ("docs/product.md", "title: Product"),
+                    ("docs/architecture.md", "title: Architecture"),
+                    ("docs/decisions.md", "title: Decisions"),
+                    ("docs/install.md", "title: Install\nparent: overview"),
+                    ("docs/code-layout.md", "title: Code layout\nparent: architecture\norder: 2"),
+                    ("docs/palette.md", "title: Palette\nparent: architecture\norder: 1"),
+                    ("docs/notes/decision-log.md", "title: Decision log\nparent: decisions"),
+                    ("docs/scratch.md", "title: Scratch")]:
+        write(repo, rel, f"---\n{fm}\n---\n")
     write(repo, SPEC, spec_text())
     write(repo, PLAN, plan_text())
+    write(repo, "README.md", "# Demo repo\n")
+
+
+def test_sidebar_is_the_fixed_category_tree(repo):
+    tree_repo(repo)
     pmdocs.build(cfg(repo))
-    nav = nav_of(read(repo, "docs/site/index.html"))
-    assert nav.index(">Demo</a>") < nav.index(">Roadmap</a>") < nav.index(">Product</a>") \
-        < nav.index(">Architecture</a>") < nav.index("<h2>Specs</h2>") < nav.index("<h2>Plans</h2>")
-    assert 'aria-current="page">Demo</a>' in nav
+    assert outline(read(repo, "docs/site/index.html")) == [
+        "Demo", "  Install",
+        "Roadmap",
+        "Backlog",
+        "Product",
+        "Architecture", "  Palette", "  Code layout",
+        "Decisions", "  Decision log",
+        "# Specs", "X",
+        "# Plans", "X plan",
+        "# Repository", "Demo repo",
+        "# Other", "Scratch",
+        "---", "Backlog archive",
+    ]
+    assert 'aria-current="page">Demo</a>' in nav_of(read(repo, "docs/site/index.html"))
 
 
-NAV_CONFIG = ('[site]\ntitle = "demo"\nnav = ["docs/index.md", "docs/roadmap.md", "docs/backlog.md", '
-              '"docs/product.md", "Specs", "docs/backlog-archive.md"]\n')
-
-
-def nav_entries(page_html):
-    import re
-    return re.findall(r"<h2>([^<]+)</h2>|>([^<>]+)</a></li>", nav_of(page_html))
-
-
-def test_nav_list_orders_pages_and_groups(repo):
-    write(repo, "docs/pmdocs.toml", NAV_CONFIG)
-    for name, title in [("product", "Product"), ("architecture", "Architecture"),
-                        ("backlog", "Backlog"), ("backlog-archive", "Backlog archive")]:
-        write(repo, f"docs/{name}.md", f"---\ntitle: {title}\n---\n")
-    write(repo, SPEC, spec_text())
-    write(repo, PLAN, plan_text())
+def test_missing_category_pages_are_simply_absent(repo):
     pmdocs.build(cfg(repo))
-    flat = [h or p for h, p in nav_entries(read(repo, "docs/site/index.html"))]
-    assert flat == ["Docs", "Demo", "Roadmap", "Backlog", "Product",
-                    "Specs", "X",
-                    "Backlog archive",            # a listed page after a group: its own run, no heading
-                    "More", "Architecture",       # unlisted top-level pages
-                    "Plans", "X plan"]            # unlisted groups keep their default order
+    assert outline(read(repo, "docs/site/index.html")) == ["Demo", "Roadmap"]
 
 
-def test_nav_run_after_a_group_has_no_heading(repo):
-    write(repo, "docs/pmdocs.toml", NAV_CONFIG)
-    write(repo, "docs/backlog-archive.md", "---\ntitle: Backlog archive\n---\n")
-    write(repo, SPEC, spec_text())
-    pmdocs.build(cfg(repo))
-    nav = nav_of(read(repo, "docs/site/index.html"))
-    between = nav.split(">X</a>", 1)[1].split(">Backlog archive</a>", 1)[0]
-    assert "<h2>" not in between
-    # ...but it is visibly a new section, not a continuation of the group above it
-    assert '<ul class="continued">' in between
-
-
-def test_nav_unknown_entry_is_error(repo):
-    write(repo, "docs/pmdocs.toml", '[site]\nnav = ["docs/nope.md", "Spex"]\n')
+def test_page_without_parent_warns(repo):
+    tree_repo(repo)
     f = pmdocs.validate(pmdocs.load_model(cfg(repo)))
-    assert has(f, "ERROR", "nav entry 'docs/nope.md' is not a page or a nav group")
-    assert has(f, "ERROR", "nav entry 'Spex' is not a page or a nav group")
+    assert has(f, "WARN", "no parent")
+    assert [x.where for x in f if x.level == "WARN"] == ["docs/scratch.md"]
+
+
+def test_bad_parent_is_error(repo):
+    write(repo, "docs/x.md", "---\ntitle: X\nparent: backlog\n---\n")
+    f = pmdocs.validate(pmdocs.load_model(cfg(repo)))
+    assert has(f, "ERROR", "parent 'backlog' is not one of overview, product, architecture, decisions")
+
+
+def test_parent_whose_page_is_missing_warns_and_lists_under_other(repo):
+    write(repo, "docs/x.md", "---\ntitle: X page\nparent: product\n---\n")
+    assert has(pmdocs.validate(pmdocs.load_model(cfg(repo))), "WARN", "docs/product.md does not exist")
+    pmdocs.build(cfg(repo))
+    assert outline(read(repo, "docs/site/index.html"))[-2:] == ["# Other", "X page"]
+
+
+def test_site_nav_setting_is_rejected(repo):
+    write(repo, "docs/pmdocs.toml", '[site]\ntitle = "demo"\nnav = ["docs/index.md"]\n')
+    assert has(pmdocs.validate(pmdocs.load_model(cfg(repo))), "ERROR",
+               "[site] nav was removed in pmdocs 0.2.0")
 
 
 EXTRA_CONFIG = '[site]\ntitle = "demo"\nextra = ["skill/*.md", "skill/references/*.md"]\n'
@@ -171,8 +218,8 @@ def test_extra_files_are_rendered_in_a_reference_group(repo):
     assert '<p class="summary">Use when testing.</p>' in skill  # description as summary
     index = read(repo, "docs/site/index.html")
     assert 'href="extra/skill/references/guide.html#part-one"' in index
-    flat = [h or p for h, p in nav_entries(index)]
-    assert flat.index("Reference") < flat.index("The guide")
+    o = outline(index)
+    assert o.index("# Reference") < o.index("The guide")
 
 
 def test_extra_files_need_no_frontmatter_but_links_are_checked(repo):
@@ -183,7 +230,7 @@ def test_extra_files_need_no_frontmatter_but_links_are_checked(repo):
     assert [f.msg for f in pmdocs.check_links(model)] == ["broken link missing.md"]
 
 
-GROUP_CONFIG = ('[site]\ntitle = "demo"\nnav = ["docs/index.md", "The skill"]\n\n'
+GROUP_CONFIG = ('[site]\ntitle = "demo"\n\n'
                 '[[site.extra]]\ngroup = "The skill"\n'
                 'about = "The skill\'s own files, rendered for reading."\n'
                 'paths = ["skill/*.md", "skill/references/*.md"]\n')
@@ -202,11 +249,10 @@ def test_named_extra_group_with_about(repo):
     with_extra(repo)
     write(repo, "docs/pmdocs.toml", GROUP_CONFIG)
     model = pmdocs.load_model(cfg(repo))
-    assert pmdocs.validate(model) == []  # "The skill" is a valid nav group
+    assert pmdocs.validate(model) == []
     pmdocs.build(cfg(repo))
-    index = read(repo, "docs/site/index.html")
-    flat = [h or p for h, p in nav_entries(index)]
-    assert flat[:3] == ["Docs", "Demo", "The skill"] and "Reference" not in flat
+    o = outline(read(repo, "docs/site/index.html"))
+    assert "# The skill" in o and "# Reference" not in o
     skill = read(repo, "docs/site/extra/skill/SKILL.html")
     assert '<p class="about">The skill&#x27;s own files, rendered for reading.</p>' in skill
 
@@ -218,9 +264,9 @@ def test_extra_group_pages_follow_the_listed_path_order(repo):
         'paths = ["skill/*.md", "skill/references/*.md"]',
         'paths = ["skill/references/guide.md", "skill/*.md", "skill/references/*.md"]'))
     pmdocs.build(cfg(repo))
-    flat = [h or p for h, p in nav_entries(read(repo, "docs/site/index.html"))]
-    start = flat.index("The skill") + 1
-    assert flat[start:start + 3] == ["The guide", "my-skill", "Another"]
+    o = outline(read(repo, "docs/site/index.html"))
+    start = o.index("# The skill") + 1
+    assert o[start:start + 3] == ["The guide", "my-skill", "Another"]
 
 
 def test_root_readme_is_rendered_by_default(repo):
@@ -228,8 +274,8 @@ def test_root_readme_is_rendered_by_default(repo):
     pmdocs.build(cfg(repo))
     readme = read(repo, "docs/site/extra/README.html")
     assert "<h1>Demo repo</h1>" in readme and 'href="../index.html"' in readme
-    flat = [h or p for h, p in nav_entries(read(repo, "docs/site/index.html"))]
-    assert flat[flat.index("Repository") + 1] == "Demo repo"
+    o = outline(read(repo, "docs/site/index.html"))
+    assert o[o.index("# Repository") + 1] == "Demo repo"
 
 
 def test_readme_can_be_turned_off(repo):
@@ -244,22 +290,13 @@ def test_readme_listed_explicitly_is_not_duplicated(repo):
     write(repo, "docs/pmdocs.toml",
           '[site]\ntitle = "demo"\n\n[[site.extra]]\ngroup = "Front page"\npaths = ["README.md"]\n')
     pmdocs.build(cfg(repo))
-    flat = [h or p for h, p in nav_entries(read(repo, "docs/site/index.html"))]
-    assert "Front page" in flat and "Repository" not in flat and flat.count("Demo repo") == 1
+    o = outline(read(repo, "docs/site/index.html"))
+    assert "# Front page" in o and "# Repository" not in o and o.count("Demo repo") == 1
 
 
 def test_no_readme_no_group(repo):
     pmdocs.build(cfg(repo))
     assert "Repository" not in read(repo, "docs/site/index.html")
-
-
-def test_nav_can_place_the_reference_group(repo):
-    with_extra(repo)
-    write(repo, "docs/pmdocs.toml", EXTRA_CONFIG.replace("extra =", 'nav = ["Reference", "docs/index.md"]\nextra ='))
-    pmdocs.build(cfg(repo))
-    flat = [h or p for h, p in nav_entries(read(repo, "docs/site/index.html"))]
-    assert flat[:2] == ["Reference", "my-skill"]
-    assert pmdocs.validate(pmdocs.load_model(cfg(repo))) == []
 
 
 def test_orphans_removed(repo):

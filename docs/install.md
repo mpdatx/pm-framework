@@ -1,7 +1,7 @@
 ---
 title: Install
 summary: Install the project-docs skill, use it in a project, keep projects current, and uninstall.
-order: 2
+parent: overview
 ---
 
 # Install

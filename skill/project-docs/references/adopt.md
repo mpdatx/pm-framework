@@ -41,6 +41,11 @@ summary: How to migrate a project that already has docs, TODO files or hooks —
 | Sibling `.html` next to each `.md` | deleted; output moves to `docs/site/` |
 | Lesson/course/content pages without frontmatter | `[paths] exclude` |
 | A hand-maintained "state of the project" table | delete it; the roadmap replaces it (ask first) |
+| A "code layout" / file-map / component page | `parent: architecture` |
+| A how-to, install or getting-started page | `parent: overview` |
+| A feature, user-guide or capabilities page | `parent: product` |
+| An execution ledger or design log with rulings | `parent: decisions` |
+| An existing architecture overview / decision log | becomes `architecture.md` / `decisions.md` itself |
 
 Finding an item's `Added` date: `git log --format=%as -S "<a distinctive phrase from the item>" -- docs/backlog.md`,
 and take the last line (the oldest commit). If unknown, use the date of the adoption commit and say so in the item.

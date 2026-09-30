@@ -16,6 +16,7 @@ nav.side .site{display:block;font-weight:700;color:var(--fg);text-decoration:non
 nav.side h2{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:1.25rem 0 .35rem;border:0;padding:0}
 nav.side ul{list-style:none;margin:0;padding:0}
 nav.side ul.continued{border-top:1px solid var(--line);margin-top:.75rem;padding-top:.5rem}
+nav.side ul.children{margin:.1rem 0 .3rem .75rem;padding-left:.5rem;border-left:1px solid var(--line);font-size:.85rem}
 nav.side li a{display:block;padding:.15rem .4rem;border-radius:4px;color:var(--fg);text-decoration:none}
 nav.side li a[aria-current]{background:var(--line);font-weight:600}
 main{max-width:52rem;padding:2rem 2.5rem 4rem}
@@ -46,27 +47,24 @@ img,svg{max-width:100%}
 <body>
 <div class="layout">
 <nav class="side"><a class="site" href="../../../../index.html">pm-framework</a>
-<h2>Docs</h2><ul>
-<li><a href="../../../../index.html">Overview</a></li>
-</ul>
-<h2>Repository</h2><ul>
-<li><a href="../../../README.html">pm-framework</a></li>
-</ul>
-<ul class="continued">
-<li><a href="../../../../install.html">Install</a></li>
+<ul>
+<li><a href="../../../../index.html">Overview</a><ul class="children"><li><a href="../../../../install.html">Install</a></li></ul></li>
 <li><a href="../../../../roadmap.html">Roadmap</a></li>
 <li><a href="../../../../backlog.html">Backlog</a></li>
 <li><a href="../../../../product.html">Product</a></li>
 <li><a href="../../../../architecture.html">Architecture</a></li>
 <li><a href="../../../../decisions.html">Decisions</a></li>
 </ul>
+<h2>Specs</h2><ul>
+<li><a href="../../../../superpowers/specs/2026-09-30-project-docs-design.html">project-docs — a portable documentation and work-status convention</a></li>
+</ul>
 <h2>The skill</h2><ul>
 <li><a href="../SKILL.html">project-docs</a></li>
 <li><a href="convention.html" aria-current="page">Convention reference</a></li>
 <li><a href="adopt.html">Adoption playbook</a></li>
 </ul>
-<h2>Specs</h2><ul>
-<li><a href="../../../../superpowers/specs/2026-09-30-project-docs-design.html">project-docs — a portable documentation and work-status convention</a></li>
+<h2>Repository</h2><ul>
+<li><a href="../../../README.html">pm-framework</a></li>
 </ul>
 <ul class="continued">
 <li><a href="../../../../backlog-archive.html">Backlog archive</a></li>
@@ -77,7 +75,7 @@ img,svg{max-width:100%}
 <p class="summary">The full convention — file layout, frontmatter, backlog and decision formats, every check and its tier, and the tool&#x27;s commands. The skill loads it before init and adopt.</p>
 <p class="about">These are the project-docs skill&#x27;s own files, as installed into ~/.claude/skills/project-docs. SKILL.md is what Claude reads when the skill triggers; the convention and adoption references are loaded on demand during init and adopt.</p>
 <p class="meta source">Source: <a href="../../../../../../skill/project-docs/references/convention.md"><code>skill/project-docs/references/convention.md</code></a> — outside <code>docs/</code>, rendered here for reading.</p>
-<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#layout">Layout</a></li><li class="l2"><a href="#frontmatter-yaml-between-----lines">Frontmatter (YAML, between --- lines)</a></li><li class="l2"><a href="#doc-map">Doc-map</a></li><li class="l2"><a href="#backlog-items">Backlog items</a></li><li class="l2"><a href="#decisions">Decisions</a></li><li class="l2"><a href="#inbox">Inbox</a></li><li class="l2"><a href="#checks-and-tiers">Checks and tiers</a></li><li class="l2"><a href="#tool">Tool</a></li></ul></details>
+<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#layout">Layout</a></li><li class="l2"><a href="#frontmatter-yaml-between-----lines">Frontmatter (YAML, between --- lines)</a></li><li class="l2"><a href="#the-sidebar-fixed">The sidebar (fixed)</a></li><li class="l2"><a href="#doc-map">Doc-map</a></li><li class="l2"><a href="#backlog-items">Backlog items</a></li><li class="l2"><a href="#decisions">Decisions</a></li><li class="l2"><a href="#inbox">Inbox</a></li><li class="l2"><a href="#checks-and-tiers">Checks and tiers</a></li><li class="l2"><a href="#tool">Tool</a></li></ul></details>
 
 <h2 id="layout">Layout</h2>
 <pre><code>TODO.md                  inbox — user-owned, free-form
@@ -99,15 +97,29 @@ scripts/hooks/pre-commit vendored git hook (core.hooksPath = scripts/hooks)
 </code></pre>
 <h2 id="frontmatter-yaml-between-----lines">Frontmatter (YAML, between <code>---</code> lines)</h2>
 <p>Every page under <code>docs/</code> except generated files and <code>[paths] exclude</code> globs needs a
-<code>title</code>. Optional on any page: <code>summary</code> (shown under the title), <code>order</code> (nav position,
-default 50).</p>
-<p>Only <code>backlog.md</code>, <code>backlog-archive.md</code>, <code>decisions.md</code>, <code>roadmap.md</code> (generated) and
-<code>index.md</code> (the site's home) have fixed names; every other page is the project's own.
-To control the sidebar fully — including the generated roadmap and the Specs/Plans
-groups — list pages and group names in <code>[site] nav</code> in <code>pmdocs.toml</code>. The list may be
-partial; unlisted pages follow in the default order. Pages listed after a group start a
-new, divided section rather than joining that group. An entry that is neither a page nor
-a group is an ERROR.</p>
+<code>title</code>. Optional on any page: <code>summary</code> (shown under the title), <code>order</code> (position among
+its siblings, default 50).</p>
+<h2 id="the-sidebar-fixed">The sidebar (fixed)</h2>
+<p>Every adopted project has the same sidebar, so work status is always in the same,
+prominent place. Projects cannot reorder it:</p>
+<pre><code>Overview        index.md          ↳ pages with parent: overview
+Roadmap         roadmap.md        (generated)
+Backlog         backlog.md
+Product         product.md        ↳ pages with parent: product
+Architecture    architecture.md   ↳ pages with parent: architecture
+Decisions       decisions.md      ↳ pages with parent: decisions
+Specs · Plans   newest first
+extra groups    README (&quot;Repository&quot;) and [[site.extra]] groups, in config order
+Other           project pages with no usable parent (each a WARN)
+Backlog archive last, below a divider
+</code></pre>
+<p>A project's own page attaches with <code>parent:</code> in its frontmatter — one of <code>overview</code>,
+<code>product</code>, <code>architecture</code>, <code>decisions</code> — and is listed, indented, under that category,
+sorted by <code>order</code> then title. Files stay where they are, in any folder under <code>docs/</code>. A
+page without a <code>parent:</code> is a WARN and appears under &quot;Other&quot;; an unknown parent is an
+ERROR; a parent whose category page doesn't exist is a WARN (and the page goes under
+&quot;Other&quot;). Category pages that don't exist are simply absent. (<code>[site] nav</code>, which let
+projects reorder the sidebar, was removed in 0.2.0 and is now an ERROR.)</p>
 <p>Markdown that must live outside <code>docs/</code> (a skill's own files, a README, an ADR folder)
 can join the site with <code>[site] extra</code>. Give each set a group name and a sentence saying
 what it is:</p>

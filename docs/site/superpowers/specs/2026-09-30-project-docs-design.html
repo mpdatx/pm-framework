@@ -16,6 +16,7 @@ nav.side .site{display:block;font-weight:700;color:var(--fg);text-decoration:non
 nav.side h2{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:1.25rem 0 .35rem;border:0;padding:0}
 nav.side ul{list-style:none;margin:0;padding:0}
 nav.side ul.continued{border-top:1px solid var(--line);margin-top:.75rem;padding-top:.5rem}
+nav.side ul.children{margin:.1rem 0 .3rem .75rem;padding-left:.5rem;border-left:1px solid var(--line);font-size:.85rem}
 nav.side li a{display:block;padding:.15rem .4rem;border-radius:4px;color:var(--fg);text-decoration:none}
 nav.side li a[aria-current]{background:var(--line);font-weight:600}
 main{max-width:52rem;padding:2rem 2.5rem 4rem}
@@ -46,27 +47,24 @@ img,svg{max-width:100%}
 <body>
 <div class="layout">
 <nav class="side"><a class="site" href="../../index.html">pm-framework</a>
-<h2>Docs</h2><ul>
-<li><a href="../../index.html">Overview</a></li>
-</ul>
-<h2>Repository</h2><ul>
-<li><a href="../../extra/README.html">pm-framework</a></li>
-</ul>
-<ul class="continued">
-<li><a href="../../install.html">Install</a></li>
+<ul>
+<li><a href="../../index.html">Overview</a><ul class="children"><li><a href="../../install.html">Install</a></li></ul></li>
 <li><a href="../../roadmap.html">Roadmap</a></li>
 <li><a href="../../backlog.html">Backlog</a></li>
 <li><a href="../../product.html">Product</a></li>
 <li><a href="../../architecture.html">Architecture</a></li>
 <li><a href="../../decisions.html">Decisions</a></li>
 </ul>
+<h2>Specs</h2><ul>
+<li><a href="2026-09-30-project-docs-design.html" aria-current="page">project-docs — a portable documentation and work-status convention</a></li>
+</ul>
 <h2>The skill</h2><ul>
 <li><a href="../../extra/skill/project-docs/SKILL.html">project-docs</a></li>
 <li><a href="../../extra/skill/project-docs/references/convention.html">Convention reference</a></li>
 <li><a href="../../extra/skill/project-docs/references/adopt.html">Adoption playbook</a></li>
 </ul>
-<h2>Specs</h2><ul>
-<li><a href="2026-09-30-project-docs-design.html" aria-current="page">project-docs — a portable documentation and work-status convention</a></li>
+<h2>Repository</h2><ul>
+<li><a href="../../extra/README.html">pm-framework</a></li>
 </ul>
 <ul class="continued">
 <li><a href="../../backlog-archive.html">Backlog archive</a></li>
@@ -283,10 +281,11 @@ states <code>pmdocs vX.Y.Z — vendored from pm-framework; do not edit, re-run t
 <li>Renders every non-generated <code>docs/**/*.md</code> (excluding <code>site/</code>) to <code>docs/site/</code>,
 mirroring paths. Generates <code>docs/roadmap.md</code> first so it is rendered too.</li>
 <li>One built-in template: inline CSS with light and dark themes (<code>prefers-color-scheme</code>),
-no external assets. Sidebar nav from frontmatter <code>order</code> then <code>title</code>, grouped by
-directory. Per-page &quot;On this page&quot; TOC from H2/H3, collapsible (a
-closed <code>&lt;details&gt;</code>, no script). Specs, plans, backlog and roadmap
-get their own nav groups.</li>
+no external assets. A fixed sidebar (amended in 0.2.0, decision D09): Overview,
+Roadmap, Backlog, Product, Architecture, Decisions — project pages nested under a
+category by <code>parent:</code> frontmatter, sorted by <code>order</code> then <code>title</code> — then Specs, Plans,
+extra groups, &quot;Other&quot; and the backlog archive. Per-page &quot;On this page&quot; TOC from H2/H3,
+collapsible (a closed <code>&lt;details&gt;</code>, no script).</li>
 <li><code>.md</code> links are rewritten to <code>.html</code>. The frontmatter is rendered as a small status
 badge line, not as raw YAML.</li>
 <li>Line endings: inputs are read with CRLF normalized to LF (and a BOM stripped); init

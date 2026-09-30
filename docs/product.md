@@ -17,9 +17,10 @@ mechanically, so drift is caught while the agent is still editing and again at c
 
 - **Convention**: `docs/` with product, architecture, decisions, backlog (+ archive),
   generated roadmap and HTML site; YAML frontmatter status on specs and plans; `TODO.md`
-  as the user's free-form inbox. Only the backlog, archive, decisions, roadmap and index
-  have fixed names — a project keeps its own pages — and `[site] nav` sets the sidebar
-  order. `[site] extra` renders Markdown that must live elsewhere (a skill's own files,
+  as the user's free-form inbox. Every project gets the same fixed sidebar — Overview,
+  Roadmap, Backlog, Product, Architecture, Decisions — so work status is always one click
+  away; a project keeps its own pages, attached under a category with `parent:`.
+  `[site] extra` renders Markdown that must live elsewhere (a skill's own files,
   a README) into the same site, in named groups that say what they are and where each
   file lives. The root README is included by convention; init and adopt ask about the
   rest.

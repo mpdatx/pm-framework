@@ -3,7 +3,7 @@
 # dependencies = ["markdown-it-py>=3.0", "pyyaml>=6.0"]
 # ///
 # SPDX-License-Identifier: MIT — Copyright (c) 2026 Matthew Daniels — https://github.com/mpdatx/pm-framework
-"""pmdocs 0.1.9 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
+"""pmdocs 0.2.0 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
 
 Keeps a project's docs and work status current: renders docs/ to docs/site/, generates
 docs/roadmap.md, validates frontmatter/backlog/links, detects drift and staleness, and
@@ -34,7 +34,7 @@ from urllib.parse import quote, unquote
 import yaml
 from markdown_it import MarkdownIt
 
-VERSION = "0.1.9"
+VERSION = "0.2.0"
 
 
 class PmdocsError(Exception):
@@ -305,6 +305,14 @@ BACKLOG_REL = "docs/backlog.md"
 ARCHIVE_REL = "docs/backlog-archive.md"
 DECISIONS_REL = "docs/decisions.md"
 INBOX_REL = "TODO.md"
+
+# The fixed sidebar (D09). A project's own pages attach under a category with `parent:`.
+PARENTS = ("overview", "product", "architecture", "decisions")
+CATEGORY_PAGES = {"overview": "docs/index.md", "product": "docs/product.md",
+                  "architecture": "docs/architecture.md", "decisions": DECISIONS_REL}
+TOP_ORDER = ["docs/index.md", ROADMAP_REL, BACKLOG_REL, "docs/product.md", "docs/architecture.md",
+             DECISIONS_REL]
+FIXED_PAGES = set(TOP_ORDER) | {ARCHIVE_REL}
 ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 FILL_MARKER = re.compile(r"<!--\s*pmdocs:fill")  # the template comment, not prose that mentions it
 
@@ -511,10 +519,23 @@ def validate(model: Model) -> list:
             if not ((cfg.root / pg).is_file() or (cfg.outside_root / pg).is_file()):
                 err(CONFIG_REL, f"[[map]] page {pg} does not exist (paths are relative to the repository root)")
 
-    group_names = {nav_group_of(model, rel).lower() for rel in model.pages}
-    for entry in cfg.nav:
-        if entry not in model.pages and entry not in GENERATED and entry.lower() not in group_names:
-            err(CONFIG_REL, f"nav entry {entry!r} is not a page or a nav group")
+    if cfg.nav:
+        err(CONFIG_REL, "[site] nav was removed in pmdocs 0.2.0: the sidebar order is fixed. Attach "
+                        f"a page with `parent:` frontmatter ({', '.join(PARENTS)}) and delete `nav`.")
+
+    for rel, page in model.pages.items():
+        if (page.meta is None or is_extra(rel) or rel in FIXED_PAGES or rel in GENERATED
+                or rel in model.specs or rel in model.plans):
+            continue
+        parent = page.meta.get("parent")
+        if parent is None:
+            warn(rel, f"no parent: set `parent:` to one of {', '.join(PARENTS)} "
+                      "(until then it is listed under Other)")
+        elif parent not in PARENTS:
+            err(rel, f"parent {parent!r} is not one of {', '.join(PARENTS)}")
+        elif CATEGORY_PAGES[parent] not in model.pages:
+            warn(rel, f"parent {parent!r}, but {CATEGORY_PAGES[parent]} does not exist "
+                      "(listed under Other)")
     return out
 
 
@@ -918,6 +939,7 @@ nav.side .site{display:block;font-weight:700;color:var(--fg);text-decoration:non
 nav.side h2{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:1.25rem 0 .35rem;border:0;padding:0}
 nav.side ul{list-style:none;margin:0;padding:0}
 nav.side ul.continued{border-top:1px solid var(--line);margin-top:.75rem;padding-top:.5rem}
+nav.side ul.children{margin:.1rem 0 .3rem .75rem;padding-left:.5rem;border-left:1px solid var(--line);font-size:.85rem}
 nav.side li a{display:block;padding:.15rem .4rem;border-radius:4px;color:var(--fg);text-decoration:none}
 nav.side li a[aria-current]{background:var(--line);font-weight:600}
 main{max-width:52rem;padding:2rem 2.5rem 4rem}
@@ -993,40 +1015,10 @@ def _title(page: Page) -> str:
     return m.group(1) if m else posixpath.basename(page.rel)[:-3]
 
 
-def nav_group_of(model: Model, rel: str) -> str:
-    if is_extra(rel):
-        g = extra_group(model.cfg, rel)
-        return g.group if g else "Reference"
-    if rel in model.specs:
-        return "Specs"
-    if rel in model.plans:
-        return "Plans"
-    d = posixpath.dirname(rel)[len("docs"):].strip("/")
-    return d.replace("-", " ").replace("/", " / ").title() if d else "Docs"
-
-
-def _default_groups(model: Model) -> list:
-    """[(group, [(rel, page)])] in the built-in order: Docs, other folders, Specs, Plans."""
-    groups = {}
-    for rel, p in model.pages.items():
-        groups.setdefault(nav_group_of(model, rel), []).append((rel, p))
-
-    def page_key(item):
-        rel, p = item
-        order = (p.meta or {}).get("order", 50)
-        return (order if isinstance(order, (int, float)) else 50, _title(p).lower(), rel)
-
-    out = []
-    for g in ["Docs", *sorted(k for k in groups if k not in ("Docs", "Specs", "Plans")), "Specs", "Plans"]:
-        if g in groups:
-            if g in ("Specs", "Plans"):
-                items = sorted(groups[g], key=lambda x: x[0], reverse=True)
-            elif all(is_extra(rel) for rel, _ in groups[g]):
-                items = sorted(groups[g], key=lambda x: _extra_key(model.cfg, x[0]))
-            else:
-                items = sorted(groups[g], key=page_key)
-            out.append((g, items))
-    return out
+def _page_key(item):
+    rel, p = item
+    order = (p.meta or {}).get("order", 50)
+    return (order if isinstance(order, (int, float)) else 50, _title(p).lower(), rel)
 
 
 def _extra_key(cfg: Config, rel: str):
@@ -1035,38 +1027,54 @@ def _extra_key(cfg: Config, rel: str):
     return (next((i for i, p in enumerate(patterns) if glob_match(rel, p)), len(patterns)), rel)
 
 
+def placed_parent(model: Model, rel: str):
+    """The category a project page hangs under, or None if it goes under "Other"."""
+    parent = ((model.pages[rel].meta or {}).get("parent"))
+    return parent if parent in PARENTS and CATEGORY_PAGES[parent] in model.pages else None
+
+
 def nav_groups(model: Model) -> list:
-    """Sidebar sections. `[site] nav` (pages and group names) comes first, in its order;
-    a run of listed pages is one section, headed "Docs" only if it is the first. Anything
-    unlisted follows in the built-in order, leftover top-level pages under "More"."""
-    default = _default_groups(model)
-    if not model.cfg.nav:
-        return default
-    by_name = {g.lower(): (g, items) for g, items in default}
-    listed_pages = {e for e in model.cfg.nav if e in model.pages}
-    out, run, placed_groups = [], [], set()
+    """The fixed sidebar, as [(heading, [(rel, page, [(rel, page)] children)], kind)].
 
-    def flush():
-        if run:
-            out.append(("Docs" if not out else "", list(run)))
-            run.clear()
-
-    for entry in model.cfg.nav:
-        if entry in model.pages:
-            run.append((entry, model.pages[entry]))
-        elif entry.lower() in by_name and entry.lower() not in placed_groups:
-            flush()
-            g, items = by_name[entry.lower()]
-            placed_groups.add(entry.lower())
-            out.append((g, [(r, p) for r, p in items if r not in listed_pages]))
-    flush()
-    for g, items in default:
-        if g.lower() in placed_groups:
+    Overview, Roadmap, Backlog, Product, Architecture, Decisions (a project's own pages
+    nested under the category their `parent:` names); then Specs, Plans, the extra groups,
+    "Other" (pages without a usable parent) and, last, the backlog archive. Projects can't
+    reorder it — the work status is always in the same, prominent place (D09)."""
+    pages, cfg = model.pages, model.cfg
+    children = {c: [] for c in PARENTS}
+    for rel in pages:
+        if is_extra(rel) or rel in FIXED_PAGES or rel in model.specs or rel in model.plans:
             continue
-        rest = [(r, p) for r, p in items if r not in listed_pages]
-        if rest:
-            out.append(("More" if g == "Docs" else g, rest))
-    return [(g, items) for g, items in out if items]
+        parent = placed_parent(model, rel)
+        if parent:
+            children[parent].append((rel, pages[rel]))
+    by_page = {page: cat for cat, page in CATEGORY_PAGES.items()}
+    tree = [(rel, pages[rel], sorted(children.get(by_page.get(rel), []), key=_page_key))
+            for rel in TOP_ORDER if rel in pages]
+    sections = [("", tree, "tree")] if tree else []
+
+    for heading, group in (("Specs", model.specs), ("Plans", model.plans)):
+        if group:
+            sections.append((heading, [(r, p, []) for r, p in sorted(group.items(), reverse=True)], "group"))
+
+    extra_sections = {}
+    for rel, p in pages.items():
+        if is_extra(rel):
+            g = extra_group(cfg, rel)
+            extra_sections.setdefault(g.group if g else "Reference", []).append((rel, p))
+    for name in dict.fromkeys(g.group for g in cfg.extra):
+        if name in extra_sections:
+            items = sorted(extra_sections[name], key=lambda x: _extra_key(cfg, x[0]))
+            sections.append((name, [(r, p, []) for r, p in items], "group"))
+
+    other = [(rel, p) for rel, p in pages.items()
+             if not (is_extra(rel) or rel in FIXED_PAGES or rel in model.specs or rel in model.plans)
+             and not placed_parent(model, rel)]
+    if other:
+        sections.append(("Other", [(r, p, []) for r, p in sorted(other, key=_page_key)], "group"))
+    if ARCHIVE_REL in pages:
+        sections.append(("", [(ARCHIVE_REL, pages[ARCHIVE_REL], [])], "continued"))
+    return sections
 
 
 def rewrite_href(href: str, src_rel: str, model: Model) -> str:
@@ -1126,14 +1134,19 @@ def render_page(page: Page, model: Model, nav) -> str:
     body, toc_heads = render_body(page, model)
     here = posixpath.dirname(site_path(page.rel))
     nav_html = []
-    for group, items in nav:
-        # A headless run (pages listed after a group in [site] nav) gets a divider, so it
-        # doesn't read as part of the group above it.
-        nav_html.append(f"<h2>{html.escape(group)}</h2><ul>" if group else '<ul class="continued">')
-        for rel, p in items:
-            href = quote(posixpath.relpath(site_path(rel), here), safe="/")
-            current = ' aria-current="page"' if rel == page.rel else ""
-            nav_html.append(f'<li><a href="{html.escape(href)}"{current}>{html.escape(_title(p))}</a></li>')
+    def link(rel, p):
+        href = quote(posixpath.relpath(site_path(rel), here), safe="/")
+        current = ' aria-current="page"' if rel == page.rel else ""
+        return f'<a href="{html.escape(href)}"{current}>{html.escape(_title(p))}</a>'
+
+    for heading, items, kind in nav:
+        if kind == "continued":
+            nav_html.append('<ul class="continued">')  # a divider: not part of the group above
+        else:
+            nav_html.append((f"<h2>{html.escape(heading)}</h2>" if heading else "") + "<ul>")
+        for rel, p, kids in items:
+            sub = "".join(f"<li>{link(r, q)}</li>" for r, q in kids)
+            nav_html.append(f"<li>{link(rel, p)}" + (f'<ul class="children">{sub}</ul>' if sub else "") + "</li>")
         nav_html.append("</ul>")
     toc = ""
     if len(toc_heads) >= 2:

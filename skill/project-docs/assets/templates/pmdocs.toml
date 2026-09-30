@@ -1,9 +1,8 @@
 # pmdocs configuration — see the project-docs skill.
 [site]
 title = "PROJECT"
-# Optional sidebar order: page paths and group names ("Specs", "Plans", or a docs/
-# subfolder's title). May be partial; unlisted pages follow by their `order`.
-# nav = ["docs/index.md", "docs/roadmap.md", "docs/backlog.md", "Specs", "Plans"]
+# The sidebar is fixed (Overview, Roadmap, Backlog, Product, Architecture, Decisions, …).
+# Attach your own pages with frontmatter `parent: overview|product|architecture|decisions`.
 # The root README.md is rendered by default as a "Repository" group; to turn it off:
 # readme = false
 # Optional: other Markdown outside docs/ to render too. Name the group and say what it is:

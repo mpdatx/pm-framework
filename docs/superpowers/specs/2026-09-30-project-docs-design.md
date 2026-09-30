@@ -186,10 +186,11 @@ project-docs skill to update`.
 - Renders every non-generated `docs/**/*.md` (excluding `site/`) to `docs/site/`,
   mirroring paths. Generates `docs/roadmap.md` first so it is rendered too.
 - One built-in template: inline CSS with light and dark themes (`prefers-color-scheme`),
-  no external assets. Sidebar nav from frontmatter `order` then `title`, grouped by
-  directory. Per-page "On this page" TOC from H2/H3, collapsible (a
-  closed `<details>`, no script). Specs, plans, backlog and roadmap
-  get their own nav groups.
+  no external assets. A fixed sidebar (amended in 0.2.0, decision D09): Overview,
+  Roadmap, Backlog, Product, Architecture, Decisions — project pages nested under a
+  category by `parent:` frontmatter, sorted by `order` then `title` — then Specs, Plans,
+  extra groups, "Other" and the backlog archive. Per-page "On this page" TOC from H2/H3,
+  collapsible (a closed `<details>`, no script).
 - `.md` links are rewritten to `.html`. The frontmatter is rendered as a small status
   badge line, not as raw YAML.
 - Line endings: inputs are read with CRLF normalized to LF (and a BOM stripped); init

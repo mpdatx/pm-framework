@@ -29,16 +29,34 @@ scripts/hooks/pre-commit vendored git hook (core.hooksPath = scripts/hooks)
 ## Frontmatter (YAML, between `---` lines)
 
 Every page under `docs/` except generated files and `[paths] exclude` globs needs a
-`title`. Optional on any page: `summary` (shown under the title), `order` (nav position,
-default 50).
+`title`. Optional on any page: `summary` (shown under the title), `order` (position among
+its siblings, default 50).
 
-Only `backlog.md`, `backlog-archive.md`, `decisions.md`, `roadmap.md` (generated) and
-`index.md` (the site's home) have fixed names; every other page is the project's own.
-To control the sidebar fully — including the generated roadmap and the Specs/Plans
-groups — list pages and group names in `[site] nav` in `pmdocs.toml`. The list may be
-partial; unlisted pages follow in the default order. Pages listed after a group start a
-new, divided section rather than joining that group. An entry that is neither a page nor
-a group is an ERROR.
+## The sidebar (fixed)
+
+Every adopted project has the same sidebar, so work status is always in the same,
+prominent place. Projects cannot reorder it:
+
+```
+Overview        index.md          ↳ pages with parent: overview
+Roadmap         roadmap.md        (generated)
+Backlog         backlog.md
+Product         product.md        ↳ pages with parent: product
+Architecture    architecture.md   ↳ pages with parent: architecture
+Decisions       decisions.md      ↳ pages with parent: decisions
+Specs · Plans   newest first
+extra groups    README ("Repository") and [[site.extra]] groups, in config order
+Other           project pages with no usable parent (each a WARN)
+Backlog archive last, below a divider
+```
+
+A project's own page attaches with `parent:` in its frontmatter — one of `overview`,
+`product`, `architecture`, `decisions` — and is listed, indented, under that category,
+sorted by `order` then title. Files stay where they are, in any folder under `docs/`. A
+page without a `parent:` is a WARN and appears under "Other"; an unknown parent is an
+ERROR; a parent whose category page doesn't exist is a WARN (and the page goes under
+"Other"). Category pages that don't exist are simply absent. (`[site] nav`, which let
+projects reorder the sidebar, was removed in 0.2.0 and is now an ERROR.)
 
 Markdown that must live outside `docs/` (a skill's own files, a README, an ADR folder)
 can join the site with `[site] extra`. Give each set a group name and a sentence saying

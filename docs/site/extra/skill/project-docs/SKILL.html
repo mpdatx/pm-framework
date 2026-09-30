@@ -16,6 +16,7 @@ nav.side .site{display:block;font-weight:700;color:var(--fg);text-decoration:non
 nav.side h2{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:1.25rem 0 .35rem;border:0;padding:0}
 nav.side ul{list-style:none;margin:0;padding:0}
 nav.side ul.continued{border-top:1px solid var(--line);margin-top:.75rem;padding-top:.5rem}
+nav.side ul.children{margin:.1rem 0 .3rem .75rem;padding-left:.5rem;border-left:1px solid var(--line);font-size:.85rem}
 nav.side li a{display:block;padding:.15rem .4rem;border-radius:4px;color:var(--fg);text-decoration:none}
 nav.side li a[aria-current]{background:var(--line);font-weight:600}
 main{max-width:52rem;padding:2rem 2.5rem 4rem}
@@ -46,27 +47,24 @@ img,svg{max-width:100%}
 <body>
 <div class="layout">
 <nav class="side"><a class="site" href="../../../index.html">pm-framework</a>
-<h2>Docs</h2><ul>
-<li><a href="../../../index.html">Overview</a></li>
-</ul>
-<h2>Repository</h2><ul>
-<li><a href="../../README.html">pm-framework</a></li>
-</ul>
-<ul class="continued">
-<li><a href="../../../install.html">Install</a></li>
+<ul>
+<li><a href="../../../index.html">Overview</a><ul class="children"><li><a href="../../../install.html">Install</a></li></ul></li>
 <li><a href="../../../roadmap.html">Roadmap</a></li>
 <li><a href="../../../backlog.html">Backlog</a></li>
 <li><a href="../../../product.html">Product</a></li>
 <li><a href="../../../architecture.html">Architecture</a></li>
 <li><a href="../../../decisions.html">Decisions</a></li>
 </ul>
+<h2>Specs</h2><ul>
+<li><a href="../../../superpowers/specs/2026-09-30-project-docs-design.html">project-docs — a portable documentation and work-status convention</a></li>
+</ul>
 <h2>The skill</h2><ul>
 <li><a href="SKILL.html" aria-current="page">project-docs</a></li>
 <li><a href="references/convention.html">Convention reference</a></li>
 <li><a href="references/adopt.html">Adoption playbook</a></li>
 </ul>
-<h2>Specs</h2><ul>
-<li><a href="../../../superpowers/specs/2026-09-30-project-docs-design.html">project-docs — a portable documentation and work-status convention</a></li>
+<h2>Repository</h2><ul>
+<li><a href="../../README.html">pm-framework</a></li>
 </ul>
 <ul class="continued">
 <li><a href="../../../backlog-archive.html">Backlog archive</a></li>
@@ -161,13 +159,18 @@ headers (<code>**Status:**</code> lines); documentation rules in <code>CLAUDE.md
 <code>docs/</code> (<code>git ls-files &quot;*.md&quot;</code>), grouped by folder.</li>
 <li>Propose a mapping table — every existing artifact → its fate (kept, converted, merged,
 excluded, retired) — and <strong>stop for the user's approval</strong>. Touch nothing before it.
+Every existing page that is kept gets a <strong>parent</strong> column: which category of the fixed
+sidebar it belongs under — <code>overview</code>, <code>product</code>, <code>architecture</code> or <code>decisions</code> (see
+<code>references/convention.md</code>). An existing page that already plays a category's role
+(an architecture overview, a decision log) becomes that category's page instead.
 Markdown outside <code>docs/</code> gets a row per folder: rendered in the site as a
 <code>[[site.extra]]</code> group (proposed name and <code>about</code>), or left out. The root README is in
 by default; say so, and offer <code>readme = false</code>.</li>
 <li>Work on a branch: <code>git switch -c pmdocs-adopt</code>.</li>
 <li>Migrate per the approved table:
 <ul>
-<li>Every page under <code>docs/</code> gets frontmatter, or is listed in <code>[paths] exclude</code>.</li>
+<li>Every page under <code>docs/</code> gets frontmatter — with its approved <code>parent:</code> — or is
+listed in <code>[paths] exclude</code>.</li>
 <li>Specs and plans: <code>**Status:**</code> lines → <code>status:</code> in the vocabulary. When unsure
 which status applies, ask.</li>
 <li>Existing backlog/TODO: items with real requirements → <code>docs/backlog.md</code> as B-nn
@@ -228,6 +231,9 @@ run <code>install-hooks</code> (idempotent), <code>build</code>, <code>check</co
 <li>Replace the project's <code>## Docs duties (project-docs)</code> section in <code>CLAUDE.md</code> with the
 current <code>SKILL_DIR/assets/claude-md-snippet.md</code> (the duties evolve with the skill);
 leave the rest of <code>CLAUDE.md</code> untouched.</li>
+<li>Resolve what the new version flags in <code>check</code>, with the user. Moving to 0.2.0 or later:
+delete <code>[site] nav</code> from <code>docs/pmdocs.toml</code> (an ERROR now), and propose a <code>parent:</code> for
+every page that warns &quot;no parent&quot; — one table, approved before you edit.</li>
 <li>Commit (<code>chore: update pmdocs to &lt;version&gt;</code>).</li>
 </ol>
 <h2 id="everyday-duties">Everyday duties</h2>
@@ -235,6 +241,8 @@ leave the rest of <code>CLAUDE.md</code> untouched.</li>
 <li>Changing code: <code>docs/pmdocs.toml</code> says which pages cover it. Update them <strong>in the same
 commit</strong>. The post-edit hook names the pages; the Stop hook lists what is stale.</li>
 <li>New source directory: add a <code>[[map]]</code> entry.</li>
+<li>New page under <code>docs/</code>: give it a <code>parent:</code> (<code>overview</code>, <code>product</code>, <code>architecture</code> or
+<code>decisions</code>) so it sits under that category in the sidebar, not under &quot;Other&quot;.</li>
 <li>Backlog: <code>in-progress</code> when you start, <code>done</code> when finished, <code>dropped</code> when
 abandoned. The hook archives closed items when <code>docs/backlog.md</code> is fully staged;
 otherwise run <code>uv run scripts/pmdocs.py check --fix</code>. Never delete items or decisions.</li>

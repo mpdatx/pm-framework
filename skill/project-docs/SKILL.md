@@ -66,12 +66,17 @@ mapping patterns from real migrations.
    `docs/` (`git ls-files "*.md"`), grouped by folder.
 2. Propose a mapping table — every existing artifact → its fate (kept, converted, merged,
    excluded, retired) — and **stop for the user's approval**. Touch nothing before it.
+   Every existing page that is kept gets a **parent** column: which category of the fixed
+   sidebar it belongs under — `overview`, `product`, `architecture` or `decisions` (see
+   `references/convention.md`). An existing page that already plays a category's role
+   (an architecture overview, a decision log) becomes that category's page instead.
    Markdown outside `docs/` gets a row per folder: rendered in the site as a
    `[[site.extra]]` group (proposed name and `about`), or left out. The root README is in
    by default; say so, and offer `readme = false`.
 3. Work on a branch: `git switch -c pmdocs-adopt`.
 4. Migrate per the approved table:
-   - Every page under `docs/` gets frontmatter, or is listed in `[paths] exclude`.
+   - Every page under `docs/` gets frontmatter — with its approved `parent:` — or is
+     listed in `[paths] exclude`.
    - Specs and plans: `**Status:**` lines → `status:` in the vocabulary. When unsure
      which status applies, ask.
    - Existing backlog/TODO: items with real requirements → `docs/backlog.md` as B-nn
@@ -123,13 +128,18 @@ Moves items from the user's `TODO.md` inbox into `docs/backlog.md`.
 3. Replace the project's `## Docs duties (project-docs)` section in `CLAUDE.md` with the
    current `SKILL_DIR/assets/claude-md-snippet.md` (the duties evolve with the skill);
    leave the rest of `CLAUDE.md` untouched.
-4. Commit (`chore: update pmdocs to <version>`).
+4. Resolve what the new version flags in `check`, with the user. Moving to 0.2.0 or later:
+   delete `[site] nav` from `docs/pmdocs.toml` (an ERROR now), and propose a `parent:` for
+   every page that warns "no parent" — one table, approved before you edit.
+5. Commit (`chore: update pmdocs to <version>`).
 
 ## Everyday duties
 
 - Changing code: `docs/pmdocs.toml` says which pages cover it. Update them **in the same
   commit**. The post-edit hook names the pages; the Stop hook lists what is stale.
 - New source directory: add a `[[map]]` entry.
+- New page under `docs/`: give it a `parent:` (`overview`, `product`, `architecture` or
+  `decisions`) so it sits under that category in the sidebar, not under "Other".
 - Backlog: `in-progress` when you start, `done` when finished, `dropped` when
   abandoned. The hook archives closed items when `docs/backlog.md` is fully staged;
   otherwise run `uv run scripts/pmdocs.py check --fix`. Never delete items or decisions.

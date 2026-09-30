@@ -28,7 +28,8 @@ only `markdown-it-py` and `pyyaml` as dependencies.
 
 - `docs/` is the reference documentation; `docs/pmdocs.toml` maps source paths to the
   pages that describe them. Update the mapped pages **in the same commit** as the code.
-- New source directory → add a `[[map]]` entry for it.
+- New source directory → add a `[[map]]` entry for it. New page under `docs/` → give
+  it `parent:` (overview, product, architecture or decisions) so it nests in the sidebar.
 - Work status lives in frontmatter (`status:` on specs and plans) and in
   `docs/backlog.md` (`## Bnn. Title` + `Status: … · Added: …`). Close work by setting
   its status — never delete backlog items or decisions.
