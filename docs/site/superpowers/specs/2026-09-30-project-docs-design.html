@@ -49,6 +49,7 @@ img,svg{max-width:100%}
 <nav class="side"><a class="site" href="../../index.html">pm-framework</a>
 <ul>
 <li><a href="../../index.html">Overview</a><ul class="children"><li><a href="../../install.html">Install</a></li></ul></li>
+<li><a href="../../gates.html">Waiting on you</a></li>
 <li><a href="../../roadmap.html">Roadmap</a></li>
 <li><a href="../../backlog.html">Backlog</a></li>
 <li><a href="../../product.html">Product</a></li>
@@ -68,12 +69,13 @@ img,svg{max-width:100%}
 </ul>
 <ul class="continued">
 <li><a href="../../backlog-archive.html">Backlog archive</a></li>
+<li><a href="../../gates-archive.html">Gates archive</a></li>
 </ul>
 </nav>
 <main>
 <h1>project-docs — a portable documentation and work-status convention</h1>
 <p class="meta"><span class="badge s-shipped">shipped</span> · created 2026-09-30 · backlog: B01</p>
-<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#purpose">Purpose</a></li><li class="l2"><a href="#prior-art-surveyed-2026-09-30">Prior art (surveyed 2026-09-30)</a></li><li class="l2"><a href="#decisions">Decisions</a></li><li class="l2"><a href="#1-the-convention">1. The convention</a></li><li class="l3"><a href="#layout-of-an-adopting-project">Layout of an adopting project</a></li><li class="l3"><a href="#frontmatter">Frontmatter</a></li><li class="l3"><a href="#backlog-items">Backlog items</a></li><li class="l3"><a href="#decisions-1">Decisions</a></li><li class="l3"><a href="#inbox-todomd">Inbox: TODO.md</a></li><li class="l3"><a href="#drift-rules">Drift rules</a></li><li class="l2"><a href="#2-the-tool-scriptspmdocspy">2. The tool: scripts/pmdocs.py</a></li><li class="l3"><a href="#commands">Commands</a></li><li class="l3"><a href="#git-hook-script">Git hook script</a></li><li class="l3"><a href="#configuration-docspmdocstoml">Configuration: docs/pmdocs.toml</a></li><li class="l2"><a href="#3-the-skill-and-this-repo">3. The skill and this repo</a></li><li class="l3"><a href="#repo-layout-pm-framework">Repo layout (pm-framework)</a></li><li class="l3"><a href="#skillmd-workflows">SKILL.md workflows</a></li><li class="l3"><a href="#behaviors-the-claudemd-snippet">Behaviors (the CLAUDE.md snippet)</a></li><li class="l2"><a href="#testing">Testing</a></li><li class="l2"><a href="#out-of-scope-v1">Out of scope (v1)</a></li></ul></details>
+<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#purpose">Purpose</a></li><li class="l2"><a href="#prior-art-surveyed-2026-09-30">Prior art (surveyed 2026-09-30)</a></li><li class="l2"><a href="#decisions">Decisions</a></li><li class="l2"><a href="#1-the-convention">1. The convention</a></li><li class="l3"><a href="#layout-of-an-adopting-project">Layout of an adopting project</a></li><li class="l3"><a href="#frontmatter">Frontmatter</a></li><li class="l3"><a href="#backlog-items">Backlog items</a></li><li class="l3"><a href="#decisions-1">Decisions</a></li><li class="l3"><a href="#gates-amended-in-030-decision-d10">Gates (amended in 0.3.0, decision D10)</a></li><li class="l3"><a href="#inbox-todomd">Inbox: TODO.md</a></li><li class="l3"><a href="#drift-rules">Drift rules</a></li><li class="l2"><a href="#2-the-tool-scriptspmdocspy">2. The tool: scripts/pmdocs.py</a></li><li class="l3"><a href="#commands">Commands</a></li><li class="l3"><a href="#git-hook-script">Git hook script</a></li><li class="l3"><a href="#configuration-docspmdocstoml">Configuration: docs/pmdocs.toml</a></li><li class="l2"><a href="#3-the-skill-and-this-repo">3. The skill and this repo</a></li><li class="l3"><a href="#repo-layout-pm-framework">Repo layout (pm-framework)</a></li><li class="l3"><a href="#skillmd-workflows">SKILL.md workflows</a></li><li class="l3"><a href="#behaviors-the-claudemd-snippet">Behaviors (the CLAUDE.md snippet)</a></li><li class="l2"><a href="#testing">Testing</a></li><li class="l2"><a href="#out-of-scope-v1">Out of scope (v1)</a></li></ul></details>
 
 <h2 id="purpose">Purpose</h2>
 <p>Projects built mostly by agents drift: architecture and product docs fall behind the
@@ -203,6 +205,15 @@ What and why, acceptance criteria, open questions.
 <p><code>docs/decisions.md</code> holds <code>## Dnn. Title</code> records with <strong>Context / Decision / Why /
 Consequences</strong> paragraphs. A reversed decision gets <code>Status: superseded by Dmm</code> beneath
 its heading; its text is not rewritten. IDs are never reused.</p>
+<h3 id="gates-amended-in-030-decision-d10">Gates (amended in 0.3.0, decision D10)</h3>
+<p>Questions only the user can answer — a look, a listen, an A/B choice, an approval, a
+decision — are gates: <code>## Gnn.</code> records in <code>docs/gates.md</code> with <code>Status: waiting | answered | dropped</code>, <code>Asked</code>, optional <code>For</code> (B/G-ids) and <code>Needs</code> (preconditions),
+then Setup, &quot;Passes if&quot;, Evidence and a <code>### Verdicts</code> list of dated, verbatim lines.
+Answered and dropped gates move to <code>docs/gates-archive.md</code>. Specs list <code>gates: [Gnn]</code>;
+blocked backlog items carry <code>Gate: Gnn</code>. Drift: a spec shipped while one of its gates
+waits; an item blocked on an answered gate; an answered gate with no verdict. The
+roadmap opens with &quot;Waiting on you&quot;; a SessionStart hook gives each new Claude session
+the open gates and in-flight backlog items; the Stop note counts open gates for the user.</p>
 <h3 id="inbox-todomd">Inbox: <code>TODO.md</code></h3>
 <ul>
 <li>Lives at the repo root. Belongs to the user.</li>

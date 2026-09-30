@@ -49,6 +49,7 @@ img,svg{max-width:100%}
 <nav class="side"><a class="site" href="../../../../index.html">pm-framework</a>
 <ul>
 <li><a href="../../../../index.html">Overview</a><ul class="children"><li><a href="../../../../install.html">Install</a></li></ul></li>
+<li><a href="../../../../gates.html">Waiting on you</a></li>
 <li><a href="../../../../roadmap.html">Roadmap</a></li>
 <li><a href="../../../../backlog.html">Backlog</a></li>
 <li><a href="../../../../product.html">Product</a></li>
@@ -68,6 +69,7 @@ img,svg{max-width:100%}
 </ul>
 <ul class="continued">
 <li><a href="../../../../backlog-archive.html">Backlog archive</a></li>
+<li><a href="../../../../gates-archive.html">Gates archive</a></li>
 </ul>
 </nav>
 <main>
@@ -75,7 +77,7 @@ img,svg{max-width:100%}
 <p class="summary">The full convention — file layout, frontmatter, backlog and decision formats, every check and its tier, and the tool&#x27;s commands. The skill loads it before init and adopt.</p>
 <p class="about">These are the project-docs skill&#x27;s own files, as installed into ~/.claude/skills/project-docs. SKILL.md is what Claude reads when the skill triggers; the convention and adoption references are loaded on demand during init and adopt.</p>
 <p class="meta source">Source: <a href="../../../../../../skill/project-docs/references/convention.md"><code>skill/project-docs/references/convention.md</code></a> — outside <code>docs/</code>, rendered here for reading.</p>
-<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#layout">Layout</a></li><li class="l2"><a href="#frontmatter-yaml-between-----lines">Frontmatter (YAML, between --- lines)</a></li><li class="l2"><a href="#the-sidebar-fixed">The sidebar (fixed)</a></li><li class="l2"><a href="#doc-map">Doc-map</a></li><li class="l2"><a href="#backlog-items">Backlog items</a></li><li class="l2"><a href="#decisions">Decisions</a></li><li class="l2"><a href="#inbox">Inbox</a></li><li class="l2"><a href="#checks-and-tiers">Checks and tiers</a></li><li class="l2"><a href="#tool">Tool</a></li></ul></details>
+<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#layout">Layout</a></li><li class="l2"><a href="#frontmatter-yaml-between-----lines">Frontmatter (YAML, between --- lines)</a></li><li class="l2"><a href="#the-sidebar-fixed">The sidebar (fixed)</a></li><li class="l2"><a href="#doc-map">Doc-map</a></li><li class="l2"><a href="#backlog-items">Backlog items</a></li><li class="l2"><a href="#gates">Gates</a></li><li class="l2"><a href="#decisions">Decisions</a></li><li class="l2"><a href="#inbox">Inbox</a></li><li class="l2"><a href="#checks-and-tiers">Checks and tiers</a></li><li class="l2"><a href="#tool">Tool</a></li></ul></details>
 
 <h2 id="layout">Layout</h2>
 <pre><code>TODO.md                  inbox — user-owned, free-form
@@ -87,23 +89,31 @@ docs/
   decisions.md           ## Dnn. records
   backlog.md             open work, ## Bnn. items
   backlog-archive.md     closed items (moved, never deleted)
+  gates.md               questions waiting on the user, ## Gnn. records with verdicts
+  gates-archive.md       answered / dropped gates (moved, never deleted)
   roadmap.md             GENERATED
   superpowers/specs/     specs
   superpowers/plans/     plans
   site/                  GENERATED HTML, committed
 scripts/pmdocs.py        vendored tool
 scripts/hooks/pre-commit vendored git hook (core.hooksPath = scripts/hooks)
-.claude/settings.json    PostToolUse + Stop hooks (merged by install-hooks)
+.claude/settings.json    PostToolUse, Stop and SessionStart hooks (merged by install-hooks)
 </code></pre>
 <h2 id="frontmatter-yaml-between-----lines">Frontmatter (YAML, between <code>---</code> lines)</h2>
 <p>Every page under <code>docs/</code> except generated files and <code>[paths] exclude</code> globs needs a
 <code>title</code>. Optional on any page: <code>summary</code> (shown under the title), <code>order</code> (position among
 its siblings, default 50).</p>
+<p>Specs add <code>status</code> (<code>draft | approved | in-progress | shipped | superseded | abandoned</code>),
+<code>created</code>, <code>backlog</code> (list of B-ids), <code>gates</code> (list of G-ids the spec's acceptance waits
+on) and, when superseded, <code>superseded_by</code> (a docs/-relative path). Plans add <code>status</code>
+(<code>draft | approved | in-progress | shipped | abandoned</code>) and optionally <code>spec</code> (a
+docs/-relative path). There is no <code>updated</code> field — git history is the authority.</p>
 <h2 id="the-sidebar-fixed">The sidebar (fixed)</h2>
 <p>Every adopted project has the same sidebar, so work status is always in the same,
 prominent place. Projects cannot reorder it:</p>
 <pre><code>Overview        index.md          ↳ pages with parent: overview
-Roadmap         roadmap.md        (generated)
+Waiting on you  gates.md
+Roadmap         roadmap.md        (generated; leads with what is waiting on you)
 Backlog         backlog.md
 Product         product.md        ↳ pages with parent: product
 Architecture    architecture.md   ↳ pages with parent: architecture
@@ -111,7 +121,7 @@ Decisions       decisions.md      ↳ pages with parent: decisions
 Specs · Plans   newest first
 extra groups    README (&quot;Repository&quot;) and [[site.extra]] groups, in config order
 Other           project pages with no usable parent (each a WARN)
-Backlog archive last, below a divider
+Backlog archive, Gates archive    last, below a divider
 </code></pre>
 <p>A project's own page attaches with <code>parent:</code> in its frontmatter — one of <code>overview</code>,
 <code>product</code>, <code>architecture</code>, <code>decisions</code> — and is listed, indented, under that category,
@@ -142,10 +152,6 @@ describe them (<code>pages</code>). Every path is relative to the repository roo
 live outside <code>docs/</code> — a <code>LICENSE.md</code>, <code>CONTRIBUTING.md</code> or provenance table is often the
 page that must change with a source directory. Such pages are checked for staleness but
 not rendered into the site.</p>
-<p>Specs add <code>status</code> (<code>draft | approved | in-progress | shipped | superseded | abandoned</code>),
-<code>created</code>, <code>backlog</code> (list of B-ids) and, when superseded, <code>superseded_by</code> (a
-docs/-relative path). Plans add <code>status</code> (<code>draft | approved | in-progress | shipped | abandoned</code>) and optionally <code>spec</code> (a docs/-relative path). There is no <code>updated</code>
-field — git history is the authority.</p>
 <h2 id="backlog-items">Backlog items</h2>
 <pre><code>## B07. Title
 Status: in-progress · Spec: superpowers/specs/2026-09-29-x-design.md · Added: 2026-09-20 · Source: TODO.md
@@ -154,8 +160,35 @@ Free prose: what and why, acceptance criteria, open questions.
 </code></pre>
 <ul>
 <li><code>Status</code> (<code>open | in-progress | blocked | done | dropped</code>) and <code>Added</code> are required.</li>
-<li><code>Spec</code>, <code>Source</code> and <code>Closed</code> are optional. Separator <code>·</code> (<code>|</code> also accepted).</li>
+<li><code>Spec</code>, <code>Source</code>, <code>Gate</code> and <code>Closed</code> are optional. Separator <code>·</code> (<code>|</code> also accepted).</li>
 <li>IDs are never reused; the next is max(backlog ∪ archive) + 1. <code>B7</code> and <code>B07</code> are the same item.</li>
+<li>Work that can't proceed until the user answers a gate: <code>Status: blocked · Gate: G04</code>.</li>
+</ul>
+<h2 id="gates">Gates</h2>
+<p>A gate is a question only the user can answer — an in-person look, a listening pass,
+an A/B choice, an approval, a decision. It is recorded <strong>once</strong>, in <code>docs/gates.md</code>;
+specs (<code>gates: [G04]</code>), backlog items (<code>Gate: G04</code>), CLAUDE.md and commit messages refer
+to it by ID instead of restating the verdict.</p>
+<pre><code>## G04. The question, as the user will read it
+Status: waiting · Asked: 2026-09-28 · For: B03 · Needs: Live running, playback healthy
+
+Setup: exactly what to look at or run.
+Passes if: what a &quot;yes&quot; looks like.
+Evidence: paths to the build, render, demo or log.
+
+### Verdicts
+
+- 2026-09-29 — &quot;the user's words, verbatim&quot; — pass. Checked: playback healthy.
+</code></pre>
+<ul>
+<li><code>Status</code> (<code>waiting | answered | dropped</code>) and <code>Asked</code> are required; <code>For</code> (B- or
+G-ids) and <code>Needs</code> (preconditions) are optional.</li>
+<li>A verdict is a dated line under the gate, quoting the user; record it the moment it is
+given. Answered gates need at least one. To retract, add a new dated line saying what
+is withdrawn and set the gate back to <code>waiting</code> (move it back from the archive).</li>
+<li>Answered and dropped gates move to <code>docs/gates-archive.md</code> (the hook does it).</li>
+<li>The roadmap leads with &quot;Waiting on you&quot;; each Claude session starts with a note listing
+open gates and in-flight work; the end-of-turn note tells the user how many gates wait.</li>
 </ul>
 <h2 id="decisions">Decisions</h2>
 <p><code>## Dnn. Title</code>, then <strong>Context / Decision / Why / Consequences</strong>. A reversed decision
@@ -177,11 +210,11 @@ Items leave only through triage, with approval. The tool only counts items.</p>
 <td>ERROR (blocks commit)</td>
 </tr>
 <tr>
-<td>Broken link or anchor; missing B-id, D-id, spec or plan reference; duplicate ID</td>
+<td>Broken link or anchor; missing B-id, D-id, G-id, spec or plan reference; duplicate ID</td>
 <td>ERROR</td>
 </tr>
 <tr>
-<td>Open item in the archive; <code>[[map]]</code> page missing</td>
+<td>Open item or waiting gate in an archive; <code>[[map]]</code> page missing</td>
 <td>ERROR</td>
 </tr>
 <tr>
@@ -189,8 +222,16 @@ Items leave only through triage, with approval. The tool only counts items.</p>
 <td>FIXED by the hook (draft header), else ERROR</td>
 </tr>
 <tr>
-<td>Done/dropped item still in the backlog</td>
-<td>FIXED by the hook (moved to archive)</td>
+<td>Done/dropped item still in the backlog; answered/dropped gate still in <code>gates.md</code></td>
+<td>FIXED by the hook (moved to the archive)</td>
+</tr>
+<tr>
+<td>Answered gate with no dated verdict</td>
+<td>WARN</td>
+</tr>
+<tr>
+<td>Spec shipped while one of its gates is waiting; item blocked on an answered gate</td>
+<td>WARN</td>
 </tr>
 <tr>
 <td>Code changed but none of its mapped pages did</td>
@@ -239,7 +280,7 @@ update and are documented by pm-framework, so no <code>[[map]]</code> needs to e
 <td>Fix → check index → block (exit 10) or build from the index and stage the site.</td>
 </tr>
 <tr>
-<td><code>hook post-edit</code> / <code>hook stop</code></td>
+<td><code>hook post-edit</code> / <code>hook stop</code> / <code>hook session-start</code></td>
 <td>Claude Code hooks; never block.</td>
 </tr>
 <tr>

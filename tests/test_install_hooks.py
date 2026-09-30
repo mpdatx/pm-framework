@@ -29,6 +29,7 @@ def test_install_fresh(repo):
     assert data["hooks"]["PostToolUse"][0]["matcher"] == "Edit|Write|MultiEdit"
     assert any("hook post-edit" in c for c in commands(data, "PostToolUse"))
     assert any("hook stop" in c for c in commands(data, "Stop"))
+    assert any("hook session-start" in c for c in commands(data, "SessionStart"))
     assert any("core.hooksPath" in m for m in msgs)
 
 

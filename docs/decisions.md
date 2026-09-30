@@ -94,3 +94,24 @@ project's own documentation still fits, as sub-pages of the categories it belong
 Frontmatter rather than folders, so adoption moves no files and breaks no links.
 **Consequences.** Projects can order pages only among siblings (`order`). Updating to
 0.2.0 means deleting `nav` and giving each project page a parent.
+
+## D10. Gates: work waiting on the user is recorded once, by ID
+
+**Context.** In two surveyed projects, work waiting on the user's eye or ear had no
+home: the most important pending listening test existed only inside a JSON notes
+string; a "waiting on your eye" list mixed user questions with engineering items; a
+single verdict was restated in five places, three of which contradicted it; nothing
+told a new session what the user still had to answer, and questions sat for up to two
+weeks.
+**Decision.** A gate (`## Gnn.` in `docs/gates.md`) records one question only the user
+can answer — status, date asked, preconditions, setup, pass condition, evidence — and
+its dated, verbatim verdicts. Answered gates are archived. Specs and backlog items
+reference gates by ID; drift checks catch a spec shipped while its gate waits and work
+still blocked on an answered gate. The roadmap leads with "Waiting on you", a
+SessionStart hook briefs each new session, and the Stop note counts open gates for the user.
+**Why.** One record per question removes the multi-place drift; a named state makes
+"waiting on the user" visible instead of implied; recording the verdict at once, in the
+user's words, stops it living only in chat.
+**Consequences.** Agents must open a gate before handing something to the user and
+record verdicts immediately. Adopting or updating to 0.3.0 means mapping existing
+waiting items and verdict logs to gates.

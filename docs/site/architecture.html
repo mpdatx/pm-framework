@@ -49,6 +49,7 @@ img,svg{max-width:100%}
 <nav class="side"><a class="site" href="index.html">pm-framework</a>
 <ul>
 <li><a href="index.html">Overview</a><ul class="children"><li><a href="install.html">Install</a></li></ul></li>
+<li><a href="gates.html">Waiting on you</a></li>
 <li><a href="roadmap.html">Roadmap</a></li>
 <li><a href="backlog.html">Backlog</a></li>
 <li><a href="product.html">Product</a></li>
@@ -68,6 +69,7 @@ img,svg{max-width:100%}
 </ul>
 <ul class="continued">
 <li><a href="backlog-archive.html">Backlog archive</a></li>
+<li><a href="gates-archive.html">Gates archive</a></li>
 </ul>
 </nav>
 <main>
@@ -144,7 +146,7 @@ release&quot;. Bump <code>VERSION</code> in <code>tool/pmdocs.py</code> once per
 </tr>
 <tr>
 <td>hooks</td>
-<td><code>hook_pre_commit</code> (exit 10 blocks), <code>hook_post_edit</code>, <code>hook_stop</code></td>
+<td><code>hook_pre_commit</code> (exit 10 blocks), <code>hook_post_edit</code>, <code>hook_stop</code>, <code>hook_session_start</code> (open gates and in-flight backlog items, read cheaply via <code>waiting_gates</code> / <code>_items_in</code>)</td>
 </tr>
 <tr>
 <td>install-hooks</td>

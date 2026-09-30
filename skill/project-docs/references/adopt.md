@@ -46,6 +46,11 @@ summary: How to migrate a project that already has docs, TODO files or hooks —
 | A feature, user-guide or capabilities page | `parent: product` |
 | An execution ledger or design log with rulings | `parent: decisions` |
 | An existing architecture overview / decision log | becomes `architecture.md` / `decisions.md` itself |
+| A "waiting on your eye/ear" section, a pending visual or listening check | one gate each (`Status: waiting`); non-user items found there go to the backlog |
+| A "needs a decision" item, or options (1)/(2) awaiting a choice | a gate; the options go under Setup |
+| A "next test set up" note buried in a data file or notes string | a gate whose Evidence points at that file |
+| A verdict restated in a spec status, CLAUDE.md and TODO | recorded once in its gate; the restatements become "see Gnn" |
+| A detailed verdict log kept beside the artifact (e.g. a `sources.md` listening log) | stays where it is; the gate links it as Evidence |
 
 Finding an item's `Added` date: `git log --format=%as -S "<a distinctive phrase from the item>" -- docs/backlog.md`,
 and take the last line (the oldest commit). If unknown, use the date of the adoption commit and say so in the item.

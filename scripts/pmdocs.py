@@ -3,7 +3,7 @@
 # dependencies = ["markdown-it-py>=3.0", "pyyaml>=6.0"]
 # ///
 # SPDX-License-Identifier: MIT — Copyright (c) 2026 Matthew Daniels — https://github.com/mpdatx/pm-framework
-"""pmdocs 0.2.0 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
+"""pmdocs 0.3.0 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
 
 Keeps a project's docs and work status current: renders docs/ to docs/site/, generates
 docs/roadmap.md, validates frontmatter/backlog/links, detects drift and staleness, and
@@ -34,7 +34,7 @@ from urllib.parse import quote, unquote
 import yaml
 from markdown_it import MarkdownIt
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 
 class PmdocsError(Exception):
@@ -216,13 +216,16 @@ PLAN_STATUSES = ("draft", "approved", "in-progress", "shipped", "abandoned")
 
 ITEM_HEAD = re.compile(r"^## (B)(\d+)\. (.+?)\s*$")
 DECISION_HEAD = re.compile(r"^## (D)(\d+)\. (.+?)\s*$")
+GATE_HEAD = re.compile(r"^## (G)(\d+)\. (.+?)\s*$")
+GATE_STATUSES = ("waiting", "answered", "dropped")
+VERDICT_LINE = re.compile(r"^- \d{4}-\d{2}-\d{2}\b", re.M)
 META_LINE = re.compile(r"^[A-Z][A-Za-z-]*: ")
 META_SPLIT = re.compile(r"\s+[·|]\s+")
 
 
 def id_key(ident: str) -> str:
     """'B07' and 'B7' name the same item."""
-    m = re.fullmatch(r"([BD])0*(\d+)", ident.strip())
+    m = re.fullmatch(r"([BDG])0*(\d+)", ident.strip())
     return f"{m.group(1)}{int(m.group(2))}" if m else ident.strip()
 
 
@@ -304,15 +307,18 @@ GENERATED = (ROADMAP_REL,)
 BACKLOG_REL = "docs/backlog.md"
 ARCHIVE_REL = "docs/backlog-archive.md"
 DECISIONS_REL = "docs/decisions.md"
+GATES_REL = "docs/gates.md"                  # questions only the user can answer (D10)
+GATES_ARCHIVE_REL = "docs/gates-archive.md"
 INBOX_REL = "TODO.md"
 
 # The fixed sidebar (D09). A project's own pages attach under a category with `parent:`.
 PARENTS = ("overview", "product", "architecture", "decisions")
 CATEGORY_PAGES = {"overview": "docs/index.md", "product": "docs/product.md",
                   "architecture": "docs/architecture.md", "decisions": DECISIONS_REL}
-TOP_ORDER = ["docs/index.md", ROADMAP_REL, BACKLOG_REL, "docs/product.md", "docs/architecture.md",
-             DECISIONS_REL]
-FIXED_PAGES = set(TOP_ORDER) | {ARCHIVE_REL}
+TOP_ORDER = ["docs/index.md", GATES_REL, ROADMAP_REL, BACKLOG_REL, "docs/product.md",
+             "docs/architecture.md", DECISIONS_REL]
+ARCHIVES = [ARCHIVE_REL, GATES_ARCHIVE_REL]  # listed last, below a divider
+FIXED_PAGES = set(TOP_ORDER) | set(ARCHIVES)
 ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 FILL_MARKER = re.compile(r"<!--\s*pmdocs:fill")  # the template comment, not prose that mentions it
 
@@ -346,6 +352,8 @@ class Model:
     archive: list
     decisions: list
     inbox: int
+    gates: list          # open gates (docs/gates.md)
+    gates_archive: list  # answered / dropped gates
 
     def item(self, key: str):
         k = id_key(str(key))
@@ -353,6 +361,15 @@ class Model:
             if it.key == k:
                 return it
         return None
+
+    def gate(self, key: str):
+        k = id_key(str(key))
+        return next((g for g in self.gates + self.gates_archive if g.key == k), None)
+
+    def verdicts(self, gate) -> list:
+        """The dated verdict lines (`- YYYY-MM-DD …`) inside a gate's block."""
+        lines = self.pages[gate.file].text.split("\n")[gate.start:gate.end]
+        return VERDICT_LINE.findall("\n".join(lines))
 
 
 def doc_files(cfg: Config) -> list:
@@ -421,7 +438,8 @@ def load_model(cfg: Config) -> Model:
 
     inbox = inbox_count(cfg.root)
     return Model(cfg, pages, specs, plans, items(BACKLOG_REL), items(ARCHIVE_REL),
-                 items(DECISIONS_REL, DECISION_HEAD), inbox)
+                 items(DECISIONS_REL, DECISION_HEAD), inbox,
+                 items(GATES_REL, GATE_HEAD), items(GATES_ARCHIVE_REL, GATE_HEAD))
 
 
 def docs_ref(ref: str) -> str:
@@ -467,6 +485,9 @@ def validate(model: Model) -> list:
         for ref in as_list(page.meta.get("backlog")):
             if model.item(str(ref)) is None:
                 err(rel, f"backlog item {ref} does not exist")
+        for ref in as_list(page.meta.get("gates")):
+            if model.gate(str(ref)) is None:
+                err(rel, f"gate {ref} does not exist")
         sup = page.meta.get("superseded_by")
         if sup and docs_ref(sup) not in model.pages:
             err(rel, f"superseded_by {sup} does not exist")
@@ -500,6 +521,32 @@ def validate(model: Model) -> list:
     for it in model.archive:
         if it.status in ("open", "in-progress", "blocked"):
             err(f"{it.file}:{it.start + 1}", f"{it.id} is {it.status} but archived; move it back to {BACKLOG_REL}")
+    for it in model.backlog + model.archive:
+        if it.fields.get("Gate") and model.gate(it.fields["Gate"]) is None:
+            err(f"{it.file}:{it.start + 1}", f"{it.id} gate {it.fields['Gate']} does not exist")
+
+    gseen = {}
+    for g in model.gates + model.gates_archive:
+        where = f"{g.file}:{g.start + 1}"
+        if g.key in gseen:
+            err(where, f"{g.id} duplicates {gseen[g.key]}")
+        else:
+            gseen[g.key] = where
+        if g.status not in GATE_STATUSES:
+            err(where, f"{g.id} status {g.fields.get('Status')!r} is not one of {', '.join(GATE_STATUSES)}")
+        if not ISO_DATE.match(g.fields.get("Asked", "")):
+            err(where, f"{g.id} needs 'Asked: YYYY-MM-DD'")
+        for ref in re.findall(r"[BG]\d+", g.fields.get("For", "")):
+            if (model.item(ref) if ref.startswith("B") else model.gate(ref)) is None:
+                err(where, f"{g.id} is for {ref}, which does not exist")
+        if g.status == "answered" and not model.verdicts(g):
+            warn(where, f"{g.id} is answered but has no dated verdict (`- YYYY-MM-DD — \"…\"`)")
+    for g in model.gates:
+        if g.status in ("answered", "dropped"):
+            warn(f"{g.file}:{g.start + 1}", f"{g.id} is {g.status}; check --fix moves it to {GATES_ARCHIVE_REL}")
+    for g in model.gates_archive:
+        if g.status == "waiting":
+            err(f"{g.file}:{g.start + 1}", f"{g.id} is waiting but archived; move it back to {GATES_REL}")
 
     dseen, dkeys = {}, {d.key for d in model.decisions}
     for d in model.decisions:
@@ -714,6 +761,15 @@ def drift_static(model: Model) -> list:
             it = model.item(str(ref))
             if it and it.status in ("open", "in-progress"):
                 out.append(Finding("WARN", rel, f"shipped, but {it.id} is still {it.status}"))
+        for ref in as_list(meta.get("gates")):
+            g = model.gate(str(ref))
+            if g and g.status == "waiting":
+                out.append(Finding("WARN", rel, f"shipped, but gate {g.id} is still waiting on the user"))
+    for it in model.backlog:
+        g = model.gate(it.fields["Gate"]) if it.fields.get("Gate") else None
+        if g and it.status == "blocked" and g.status in ("answered", "dropped"):
+            out.append(Finding("WARN", f"{it.file}:{it.start + 1}",
+                               f"{it.id} is blocked on {g.id}, which is {g.status}; unblock it"))
     return out
 
 
@@ -765,26 +821,42 @@ H1_LINE = re.compile(r"^# (.+?)\s*$", re.M)
 SPEC_LINE = re.compile(r"^\*\*Spec:\*\*\s*`?([^`\s]+)`?", re.M)
 
 
-def fix_closed_items(cfg: Config, model: Model, today: str) -> list:
-    """Move done/dropped items from the backlog to the end of the archive."""
-    closed = [it for it in model.backlog if it.status in CLOSED_STATUSES]
-    if not closed:
+GATES_ARCHIVE_TEMPLATE = ("---\ntitle: Gates archive\nsummary: Answered and dropped gates, with their "
+                          "verdicts, oldest first.\n---\n\n# Gates archive\n")
+
+
+def _archive_items(cfg: Config, model: Model, items: list, src_rel: str, dst_rel: str,
+                   template: str, today: str | None) -> list:
+    """Move closed items (blocks) from src to the end of dst; stamp `Closed:` if today is given."""
+    if not items:
         return []
-    lines = model.pages[BACKLOG_REL].text.split("\n")
+    lines = model.pages[src_rel].text.split("\n")
     blocks = []
-    for it in closed:
+    for it in items:
         block = lines[it.start:it.end]
-        if it.meta_line is not None and "Closed" not in it.fields:
+        if today and it.meta_line is not None and "Closed" not in it.fields:
             block[it.meta_line - it.start] += f" · Closed: {today}"
         while block and not block[-1].strip():
             block.pop()
         blocks.append("\n".join(block))
-    for it in sorted(closed, key=lambda i: i.start, reverse=True):
+    for it in sorted(items, key=lambda i: i.start, reverse=True):
         del lines[it.start:it.end]
-    write_text(cfg.root / BACKLOG_REL, "\n".join(lines).rstrip("\n") + "\n")
-    archive = model.pages[ARCHIVE_REL].text if ARCHIVE_REL in model.pages else ARCHIVE_TEMPLATE
-    write_text(cfg.root / ARCHIVE_REL, archive.rstrip("\n") + "\n\n" + "\n\n".join(blocks) + "\n")
-    return [Finding("FIXED", BACKLOG_REL, f"moved {', '.join(i.id for i in closed)} to {ARCHIVE_REL}")]
+    write_text(cfg.root / src_rel, "\n".join(lines).rstrip("\n") + "\n")
+    archive = model.pages[dst_rel].text if dst_rel in model.pages else template
+    write_text(cfg.root / dst_rel, archive.rstrip("\n") + "\n\n" + "\n\n".join(blocks) + "\n")
+    return [Finding("FIXED", src_rel, f"moved {', '.join(i.id for i in items)} to {dst_rel}")]
+
+
+def fix_closed_items(cfg: Config, model: Model, today: str) -> list:
+    """Move done/dropped items from the backlog to the end of the archive."""
+    closed = [it for it in model.backlog if it.status in CLOSED_STATUSES]
+    return _archive_items(cfg, model, closed, BACKLOG_REL, ARCHIVE_REL, ARCHIVE_TEMPLATE, today)
+
+
+def fix_closed_gates(cfg: Config, model: Model) -> list:
+    """Move answered/dropped gates to the gates archive (their verdicts are already dated)."""
+    closed = [g for g in model.gates if g.status in ("answered", "dropped")]
+    return _archive_items(cfg, model, closed, GATES_REL, GATES_ARCHIVE_REL, GATES_ARCHIVE_TEMPLATE, None)
 
 
 def fix_missing_frontmatter(cfg: Config, model: Model, blocked: frozenset) -> list:
@@ -817,6 +889,11 @@ def apply_fixes(cfg: Config, model: Model, today: str, blocked: frozenset = froz
         if moved:
             findings += moved
             touched += [BACKLOG_REL, ARCHIVE_REL]
+    if not ({GATES_REL, GATES_ARCHIVE_REL} & blocked):
+        moved = fix_closed_gates(cfg, model)
+        if moved:
+            findings += moved
+            touched += [GATES_REL, GATES_ARCHIVE_REL]
     for f in fix_missing_frontmatter(cfg, model, blocked):
         findings.append(f)
         touched.append(f.where)
@@ -878,8 +955,15 @@ def _link(to_rel: str, text, anchor: str = "") -> str:
 
 
 def render_roadmap(model: Model) -> str:
-    out = ["---", "title: Roadmap", "summary: Generated from specs, plans, the backlog and the inbox.",
-           "order: 5", "---", "", GENERATED_BANNER, "", "# Roadmap", "", "## Initiatives", ""]
+    out = ["---", "title: Roadmap", "summary: Generated from gates, specs, plans, the backlog and the inbox.",
+           "order: 5", "---", "", GENERATED_BANNER, "", "# Roadmap", "", "## Waiting on you", ""]
+    waiting = [g for g in model.gates if g.status == "waiting"]
+    for g in waiting:
+        details = [f"{k.lower()}: {g.fields[k]}" for k in ("Needs", "For") if g.fields.get(k)]
+        details.append(f"asked {g.fields.get('Asked', '?')}")
+        out.append(f"- **{g.id}** {_link(GATES_REL, g.title, slugify(f'{g.id}. {g.title}'))} — "
+                   + " · ".join(details))
+    out += ([""] if waiting else ["Nothing is waiting on you.", ""]) + ["## Initiatives", ""]
     plans_by_spec = {}
     for rel, p in sorted(model.plans.items()):
         if p.meta and p.meta.get("spec"):
@@ -1072,8 +1156,9 @@ def nav_groups(model: Model) -> list:
              and not placed_parent(model, rel)]
     if other:
         sections.append(("Other", [(r, p, []) for r, p in sorted(other, key=_page_key)], "group"))
-    if ARCHIVE_REL in pages:
-        sections.append(("", [(ARCHIVE_REL, pages[ARCHIVE_REL], [])], "continued"))
+    archives = [(rel, pages[rel], []) for rel in ARCHIVES if rel in pages]
+    if archives:
+        sections.append(("", archives, "continued"))
     return sections
 
 
@@ -1372,7 +1457,10 @@ def hook_stop(stdin_text: str, cwd: Path) -> str:
                  for f in staleness(cfg, changed_files(root, staged=False))]
         stale_text = "docs may be stale: " + "; ".join(dict.fromkeys(stale)) if stale else ""
         n = inbox_count(root)
-        parts = [p for p in (stale_text, f"{n} inbox item(s) in TODO.md awaiting triage" if n else "") if p]
+        waiting = len(waiting_gates(root))
+        parts = [p for p in (stale_text,
+                             f"{waiting} gate(s) waiting on you (docs/gates.md)" if waiting else "",
+                             f"{n} inbox item(s) in TODO.md awaiting triage" if n else "") if p]
         if not parts:
             return ""
         # systemMessage is shown to the user. additionalContext re-invokes the agent, so it
@@ -1386,6 +1474,49 @@ def hook_stop(stdin_text: str, cwd: Path) -> str:
         return ""
 
 
+def _items_in(root: Path, rel: str, head: re.Pattern) -> list:
+    path = Path(root) / rel
+    return parse_items(read_text(path), rel, head) if path.is_file() else []
+
+
+def waiting_gates(root: Path) -> list:
+    """Open gates still waiting on the user. Cheap (reads one file): hooks call it every turn."""
+    return [g for g in _items_in(root, GATES_REL, GATE_HEAD) if g.status == "waiting"]
+
+
+def hook_session_start(stdin_text: str, cwd: Path) -> str:
+    """Claude Code SessionStart: tell the agent what is in flight — gates waiting on the user,
+    backlog items in progress or blocked — so a new session starts current (D10)."""
+    try:
+        data = json.loads(stdin_text) if stdin_text.strip() else {}
+        root = find_root(Path(data.get("cwd") or cwd))
+        lines = []
+        gates = waiting_gates(root)
+        if gates:
+            lines.append("Waiting on the user (docs/gates.md):")
+            for g in gates:
+                needs = f"needs: {g.fields['Needs']}; " if g.fields.get("Needs") else ""
+                lines.append(f"- {g.id} {g.title} ({needs}asked {g.fields.get('Asked', '?')})")
+        active = [it for it in _items_in(root, BACKLOG_REL, ITEM_HEAD) if it.status in ("in-progress", "blocked")]
+        if active:
+            lines.append("In flight (docs/backlog.md):")
+            for it in active:
+                state = f"blocked on {it.fields['Gate']}" if it.status == "blocked" and it.fields.get("Gate") else it.status
+                lines.append(f"- {it.id} {it.title} ({state})")
+        n = inbox_count(root)
+        if n:
+            lines.append(f"{n} inbox item(s) in TODO.md awaiting triage.")
+        if not lines:
+            return ""
+        if gates:
+            lines.append("When the user gives a verdict on a gate, record their words in that gate at "
+                         "once (a dated `- YYYY-MM-DD — \"…\"` line) and reference the gate by ID elsewhere.")
+        msg = "pmdocs — project status at session start:\n" + "\n".join(lines)
+        return json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": msg}})
+    except Exception:
+        return ""
+
+
 # === install-hooks ===
 
 HOOKS_PATH = "scripts/hooks"
@@ -1395,6 +1526,8 @@ CLAUDE_HOOKS = {
                     "command": 'uv run --quiet "$CLAUDE_PROJECT_DIR/scripts/pmdocs.py" hook post-edit'},
     "Stop": {"matcher": None,
              "command": 'uv run --quiet "$CLAUDE_PROJECT_DIR/scripts/pmdocs.py" hook stop'},
+    "SessionStart": {"matcher": None,
+                     "command": 'uv run --quiet "$CLAUDE_PROJECT_DIR/scripts/pmdocs.py" hook session-start'},
 }
 
 
@@ -1558,7 +1691,7 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--staged", action="store_true", help="staleness against the index instead of the working tree")
     c.add_argument("--fix", action="store_true", help="apply mechanical fixes")
     h = sub.add_parser("hook", help="entry points for the git and Claude Code hooks")
-    h.add_argument("event", choices=["pre-commit", "post-edit", "stop"])
+    h.add_argument("event", choices=["pre-commit", "post-edit", "stop", "session-start"])
     i = sub.add_parser("install-hooks", help="point git at scripts/hooks and register Claude Code hooks")
     g = i.add_mutually_exclusive_group()
     g.add_argument("--status", action="store_true")

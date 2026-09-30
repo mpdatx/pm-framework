@@ -48,11 +48,22 @@ def test_init_and_adopt_surface_markdown_outside_docs():
         assert "outside `docs/`" in section and "[[site.extra]]" in section, workflow
 
 
+def test_skill_teaches_gates():
+    body = pmdocs.read_text(SKILL / "SKILL.md")
+    duties = body.split("## Everyday duties", 1)[1]
+    assert "docs/gates.md" in duties and "verbatim" in duties
+    adopt = body.split("## adopt", 1)[1].split("\n## ", 1)[0]
+    assert "gate" in adopt.lower()
+    snippet = (SKILL / "assets" / "claude-md-snippet.md").read_text(encoding="utf-8")
+    assert "docs/gates.md" in snippet
+
+
 def test_templates_pass_check(tmp_path):
     repo = tmp_path / "newproj"
     (repo / "docs").mkdir(parents=True)
     git(repo, "init", "-q", "-b", "main")
-    for name in ("index.md", "product.md", "architecture.md", "decisions.md", "backlog.md", "backlog-archive.md"):
+    for name in ("index.md", "product.md", "architecture.md", "decisions.md", "backlog.md", "backlog-archive.md",
+                 "gates.md", "gates-archive.md"):
         shutil.copyfile(TEMPLATES / name, repo / "docs" / name)
     shutil.copyfile(TEMPLATES / "TODO.md", repo / "TODO.md")
     write(repo, "docs/pmdocs.toml", (TEMPLATES / "pmdocs.toml").read_text(encoding="utf-8").replace("PROJECT", "newproj"))

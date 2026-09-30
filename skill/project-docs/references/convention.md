@@ -17,13 +17,15 @@ docs/
   decisions.md           ## Dnn. records
   backlog.md             open work, ## Bnn. items
   backlog-archive.md     closed items (moved, never deleted)
+  gates.md               questions waiting on the user, ## Gnn. records with verdicts
+  gates-archive.md       answered / dropped gates (moved, never deleted)
   roadmap.md             GENERATED
   superpowers/specs/     specs
   superpowers/plans/     plans
   site/                  GENERATED HTML, committed
 scripts/pmdocs.py        vendored tool
 scripts/hooks/pre-commit vendored git hook (core.hooksPath = scripts/hooks)
-.claude/settings.json    PostToolUse + Stop hooks (merged by install-hooks)
+.claude/settings.json    PostToolUse, Stop and SessionStart hooks (merged by install-hooks)
 ```
 
 ## Frontmatter (YAML, between `---` lines)
@@ -32,6 +34,12 @@ Every page under `docs/` except generated files and `[paths] exclude` globs need
 `title`. Optional on any page: `summary` (shown under the title), `order` (position among
 its siblings, default 50).
 
+Specs add `status` (`draft | approved | in-progress | shipped | superseded | abandoned`),
+`created`, `backlog` (list of B-ids), `gates` (list of G-ids the spec's acceptance waits
+on) and, when superseded, `superseded_by` (a docs/-relative path). Plans add `status`
+(`draft | approved | in-progress | shipped | abandoned`) and optionally `spec` (a
+docs/-relative path). There is no `updated` field — git history is the authority.
+
 ## The sidebar (fixed)
 
 Every adopted project has the same sidebar, so work status is always in the same,
@@ -39,7 +47,8 @@ prominent place. Projects cannot reorder it:
 
 ```
 Overview        index.md          ↳ pages with parent: overview
-Roadmap         roadmap.md        (generated)
+Waiting on you  gates.md
+Roadmap         roadmap.md        (generated; leads with what is waiting on you)
 Backlog         backlog.md
 Product         product.md        ↳ pages with parent: product
 Architecture    architecture.md   ↳ pages with parent: architecture
@@ -47,7 +56,7 @@ Decisions       decisions.md      ↳ pages with parent: decisions
 Specs · Plans   newest first
 extra groups    README ("Repository") and [[site.extra]] groups, in config order
 Other           project pages with no usable parent (each a WARN)
-Backlog archive last, below a divider
+Backlog archive, Gates archive    last, below a divider
 ```
 
 A project's own page attaches with `parent:` in its frontmatter — one of `overview`,
@@ -87,12 +96,6 @@ live outside `docs/` — a `LICENSE.md`, `CONTRIBUTING.md` or provenance table i
 page that must change with a source directory. Such pages are checked for staleness but
 not rendered into the site.
 
-Specs add `status` (`draft | approved | in-progress | shipped | superseded | abandoned`),
-`created`, `backlog` (list of B-ids) and, when superseded, `superseded_by` (a
-docs/-relative path). Plans add `status` (`draft | approved | in-progress | shipped |
-abandoned`) and optionally `spec` (a docs/-relative path). There is no `updated`
-field — git history is the authority.
-
 ## Backlog items
 
 ```
@@ -103,8 +106,38 @@ Free prose: what and why, acceptance criteria, open questions.
 ```
 
 - `Status` (`open | in-progress | blocked | done | dropped`) and `Added` are required.
-- `Spec`, `Source` and `Closed` are optional. Separator ` · ` (`|` also accepted).
+- `Spec`, `Source`, `Gate` and `Closed` are optional. Separator ` · ` (`|` also accepted).
 - IDs are never reused; the next is max(backlog ∪ archive) + 1. `B7` and `B07` are the same item.
+- Work that can't proceed until the user answers a gate: `Status: blocked · Gate: G04`.
+
+## Gates
+
+A gate is a question only the user can answer — an in-person look, a listening pass,
+an A/B choice, an approval, a decision. It is recorded **once**, in `docs/gates.md`;
+specs (`gates: [G04]`), backlog items (`Gate: G04`), CLAUDE.md and commit messages refer
+to it by ID instead of restating the verdict.
+
+```
+## G04. The question, as the user will read it
+Status: waiting · Asked: 2026-09-28 · For: B03 · Needs: Live running, playback healthy
+
+Setup: exactly what to look at or run.
+Passes if: what a "yes" looks like.
+Evidence: paths to the build, render, demo or log.
+
+### Verdicts
+
+- 2026-09-29 — "the user's words, verbatim" — pass. Checked: playback healthy.
+```
+
+- `Status` (`waiting | answered | dropped`) and `Asked` are required; `For` (B- or
+  G-ids) and `Needs` (preconditions) are optional.
+- A verdict is a dated line under the gate, quoting the user; record it the moment it is
+  given. Answered gates need at least one. To retract, add a new dated line saying what
+  is withdrawn and set the gate back to `waiting` (move it back from the archive).
+- Answered and dropped gates move to `docs/gates-archive.md` (the hook does it).
+- The roadmap leads with "Waiting on you"; each Claude session starts with a note listing
+  open gates and in-flight work; the end-of-turn note tells the user how many gates wait.
 
 ## Decisions
 
@@ -121,10 +154,12 @@ Items leave only through triage, with approval. The tool only counts items.
 | Finding | Tier |
 |---|---|
 | Missing/invalid frontmatter or title; status outside vocabulary | ERROR (blocks commit) |
-| Broken link or anchor; missing B-id, D-id, spec or plan reference; duplicate ID | ERROR |
-| Open item in the archive; `[[map]]` page missing | ERROR |
+| Broken link or anchor; missing B-id, D-id, G-id, spec or plan reference; duplicate ID | ERROR |
+| Open item or waiting gate in an archive; `[[map]]` page missing | ERROR |
 | Spec/plan without frontmatter | FIXED by the hook (draft header), else ERROR |
-| Done/dropped item still in the backlog | FIXED by the hook (moved to archive) |
+| Done/dropped item still in the backlog; answered/dropped gate still in `gates.md` | FIXED by the hook (moved to the archive) |
+| Answered gate with no dated verdict | WARN |
+| Spec shipped while one of its gates is waiting; item blocked on an answered gate | WARN |
 | Code changed but none of its mapped pages did | WARN |
 | Tracked source file not covered by any `[[map]]` | WARN |
 | Spec draft while its plan moved; plan shipped but spec not; spec shipped but backlog item open | WARN |
@@ -142,7 +177,7 @@ update and are documented by pm-framework, so no `[[map]]` needs to exclude them
 | `build [--check]` | Roadmap + site. `--check` exits 1 if stale, writes nothing. |
 | `check [--staged] [--fix]` | All checks. Exit 1 on any ERROR. `--fix` applies FIXED-tier fixes. |
 | `hook pre-commit` | Fix → check index → block (exit 10) or build from the index and stage the site. |
-| `hook post-edit` / `hook stop` | Claude Code hooks; never block. |
+| `hook post-edit` / `hook stop` / `hook session-start` | Claude Code hooks; never block. |
 | `install-hooks [--status\|--uninstall]` | `core.hooksPath` + `.claude/settings.json`. |
 | `version` | Vendored version. |
 

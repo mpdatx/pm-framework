@@ -49,6 +49,7 @@ img,svg{max-width:100%}
 <nav class="side"><a class="site" href="index.html">pm-framework</a>
 <ul>
 <li><a href="index.html">Overview</a><ul class="children"><li><a href="install.html">Install</a></li></ul></li>
+<li><a href="gates.html">Waiting on you</a></li>
 <li><a href="roadmap.html">Roadmap</a></li>
 <li><a href="backlog.html">Backlog</a></li>
 <li><a href="product.html" aria-current="page">Product</a></li>
@@ -68,6 +69,7 @@ img,svg{max-width:100%}
 </ul>
 <ul class="continued">
 <li><a href="backlog-archive.html">Backlog archive</a></li>
+<li><a href="gates-archive.html">Gates archive</a></li>
 </ul>
 </nav>
 <main>
@@ -94,14 +96,19 @@ rest.</li>
 <li><strong>Skill workflows</strong>: init (new project), adopt (migrate existing docs, with an approved
 mapping), triage (inbox → backlog with the user), update (re-vendor the tool and
 refresh the project's CLAUDE.md duties).</li>
+<li><strong>Gates — work waiting on the user</strong>: every question only the user can answer (a
+look, a listen, an approval, a decision) is one record in <code>docs/gates.md</code>, with its
+setup, pass condition and dated, verbatim verdicts. Everything else refers to it by ID.
+The roadmap leads with &quot;Waiting on you&quot;, each Claude session starts knowing what is
+open, and drift checks catch a spec shipped while its gate still waits.</li>
 <li><strong>Capturing discovered work</strong>: when a question, feedback or a finding reveals work
 outside the current task, the agent offers to note it in <code>TODO.md</code> or draft a backlog
 item, rather than letting it scroll away.</li>
 <li><strong>Tool</strong> (<code>scripts/pmdocs.py</code>): build the site and roadmap, check frontmatter, links,
 drift and staleness, apply mechanical fixes, install hooks.</li>
 <li><strong>Enforcement</strong>: pre-commit blocks only on doc errors and builds the site from the
-index; Claude Code hooks name the pages covering each edited file and list stale pages
-at the end of a turn.</li>
+index; Claude Code hooks name the pages covering each edited file, list stale pages at
+the end of a turn, and brief each new session on open gates and in-flight work.</li>
 <li><strong>Cross-platform</strong>: Linux, macOS and Windows; POSIX <code>sh</code> hook; Python via <code>uv</code>.</li>
 </ul>
 <h2 id="non-goals">Non-goals</h2>

@@ -8,6 +8,10 @@
   `docs/backlog.md` (`## Bnn. Title` + `Status: … · Added: …`). Close work by setting
   its status — never delete backlog items or decisions.
 - Record non-obvious decisions as `## Dnn.` in `docs/decisions.md`.
+- Anything only the user can settle (a look, a listen, an approval, a decision) is a
+  gate in `docs/gates.md` (`## Gnn.`, `Status: waiting`). Open the gate before handing
+  it over; when the user answers, record their words in it at once, verbatim and dated;
+  everywhere else refer to it by ID instead of restating the verdict.
 - Verify claims against the code, not against older docs.
 - Never hand-edit `docs/site/` or `docs/roadmap.md` — `uv run scripts/pmdocs.py build`.
 - `TODO.md` is the user's inbox: append, never rewrite. Move items into the backlog

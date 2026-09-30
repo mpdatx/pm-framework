@@ -49,6 +49,7 @@ img,svg{max-width:100%}
 <nav class="side"><a class="site" href="../../../index.html">pm-framework</a>
 <ul>
 <li><a href="../../../index.html">Overview</a><ul class="children"><li><a href="../../../install.html">Install</a></li></ul></li>
+<li><a href="../../../gates.html">Waiting on you</a></li>
 <li><a href="../../../roadmap.html">Roadmap</a></li>
 <li><a href="../../../backlog.html">Backlog</a></li>
 <li><a href="../../../product.html">Product</a></li>
@@ -68,6 +69,7 @@ img,svg{max-width:100%}
 </ul>
 <ul class="continued">
 <li><a href="../../../backlog-archive.html">Backlog archive</a></li>
+<li><a href="../../../gates-archive.html">Gates archive</a></li>
 </ul>
 </nav>
 <main>
@@ -129,7 +131,8 @@ If uv is missing, stop and tell the user (https://docs.astral.sh/uv/).</li>
 <li>Add the lines of <code>SKILL_DIR/assets/gitattributes</code> to <code>.gitattributes</code> (create it if
 absent; skip lines already present).</li>
 <li>Copy templates from <code>SKILL_DIR/assets/templates/</code>: <code>index.md</code>, <code>product.md</code>,
-<code>architecture.md</code>, <code>decisions.md</code>, <code>backlog.md</code>, <code>backlog-archive.md</code> → <code>docs/</code>;
+<code>architecture.md</code>, <code>decisions.md</code>, <code>backlog.md</code>, <code>backlog-archive.md</code>, <code>gates.md</code>,
+<code>gates-archive.md</code> → <code>docs/</code>;
 <code>pmdocs.toml</code> → <code>docs/</code> with <code>PROJECT</code> replaced by the directory name; <code>TODO.md</code> → the
 project root, only if absent.</li>
 <li>Fill every <code>pmdocs:fill</code> marker from the actual code — read it; don't invent. Remove
@@ -156,7 +159,10 @@ mapping patterns from real migrations.</p>
 (<code>git config core.hooksPath</code>, <code>.git/hooks</code>, husky/lefthook/pre-commit configs); Claude
 hooks in <code>.claude/settings*.json</code>; TODO/backlog files; decision logs; spec and plan
 headers (<code>**Status:**</code> lines); documentation rules in <code>CLAUDE.md</code>; Markdown outside
-<code>docs/</code> (<code>git ls-files &quot;*.md&quot;</code>), grouped by folder.</li>
+<code>docs/</code> (<code>git ls-files &quot;*.md&quot;</code>), grouped by folder; and everything <strong>waiting on the
+user</strong> — &quot;waiting on your eye/ear&quot; sections, pending listening or visual checks,
+open decisions, &quot;next test set up&quot; notes, even inside data files — plus where
+verdicts have been recorded so far.</li>
 <li>Propose a mapping table — every existing artifact → its fate (kept, converted, merged,
 excluded, retired) — and <strong>stop for the user's approval</strong>. Touch nothing before it.
 Every existing page that is kept gets a <strong>parent</strong> column: which category of the fixed
@@ -177,6 +183,11 @@ which status applies, ask.</li>
 (closed ones → <code>docs/backlog-archive.md</code>); loose ideas stay in <code>TODO.md</code> for triage.
 If the file is large, ask the user which they prefer.</li>
 <li>Decision logs → <code>docs/decisions.md</code> as <code>## Dnn. Title</code>, keeping existing numbers.</li>
+<li>Each question still waiting on the user → a gate in <code>docs/gates.md</code> (<code>## Gnn.</code>,
+<code>Status: waiting</code>), with its setup, pass condition and evidence; work blocked on it
+→ <code>Status: blocked · Gate: Gnn</code>. Recent answered ones may become archived gates with
+their verdicts. Detailed verdict logs already kept elsewhere stay where they are,
+linked as evidence; statements that restate a verdict elsewhere become &quot;see Gnn&quot;.</li>
 <li>Approved outside-<code>docs/</code> groups → <code>[[site.extra]]</code> entries in <code>docs/pmdocs.toml</code>
 (they stay where they are; the site renders them with their source path shown).</li>
 </ul>
@@ -233,7 +244,9 @@ current <code>SKILL_DIR/assets/claude-md-snippet.md</code> (the duties evolve wi
 leave the rest of <code>CLAUDE.md</code> untouched.</li>
 <li>Resolve what the new version flags in <code>check</code>, with the user. Moving to 0.2.0 or later:
 delete <code>[site] nav</code> from <code>docs/pmdocs.toml</code> (an ERROR now), and propose a <code>parent:</code> for
-every page that warns &quot;no parent&quot; — one table, approved before you edit.</li>
+every page that warns &quot;no parent&quot; — one table, approved before you edit. Moving to
+0.3.0 or later: copy <code>gates.md</code> and <code>gates-archive.md</code> from the templates if absent,
+and propose gates for anything currently waiting on the user (adopt step 1's list).</li>
 <li>Commit (<code>chore: update pmdocs to &lt;version&gt;</code>).</li>
 </ol>
 <h2 id="everyday-duties">Everyday duties</h2>
@@ -257,6 +270,21 @@ is not being done in this task, say so and offer to capture it — never drop it
 silently. Default: append a one-line note to <code>TODO.md</code> (<code>- noted while &lt;task&gt;: …</code>). If
 the what and why are already clear, offer a drafted backlog item instead. Offer once,
 briefly, at a natural pause; the user decides.</li>
+<li>Gates — questions only the user can answer (a look, a listen, an approval, a
+decision) live in <code>docs/gates.md</code>:
+<ul>
+<li>When you hand the user something to judge, open a gate first: <code>## Gnn. &lt;the question&gt;</code>, <code>Status: waiting · Asked: &lt;today&gt; · For: Bnn · Needs: &lt;preconditions&gt;</code>,
+then Setup, &quot;Passes if&quot;, Evidence. Work that can't proceed → <code>Status: blocked · Gate: Gnn</code>.</li>
+<li>When the user gives a verdict, record it in the gate <strong>at once, verbatim</strong>:
+<code>- YYYY-MM-DD — &quot;&lt;their words&gt;&quot; — pass/fail/unclear. Checked: &lt;preconditions&gt;</code>,
+then set <code>Status: answered</code> (the hook archives it) and unblock the work.</li>
+<li>Everywhere else — specs (<code>gates: [Gnn]</code>), backlog, CLAUDE.md, commits — refer to
+the gate by ID; never restate the verdict. A retraction is a new dated line in the
+gate, which goes back to <code>waiting</code>.</li>
+<li>Each session starts with a note listing open gates; raise the relevant ones with
+the user rather than waiting to be asked.</li>
+</ul>
+</li>
 <li>Before finishing: <code>uv run scripts/pmdocs.py check</code>.</li>
 </ul>
 <h2 id="red-flags">Red flags</h2>
@@ -283,6 +311,10 @@ briefly, at a natural pause; the user decides.</li>
 <tr>
 <td>&quot;That's out of scope, I'll just mention it&quot;</td>
 <td>A mention scrolls away. Offer to capture it in <code>TODO.md</code> or the backlog.</td>
+</tr>
+<tr>
+<td>&quot;The user said it looked right; I'll note it in the spec and CLAUDE.md&quot;</td>
+<td>Record it once, in the gate, verbatim. Everything else says &quot;see Gnn&quot;.</td>
 </tr>
 <tr>
 <td>&quot;PMDOCS_SKIP=1 gets me past this&quot;</td>

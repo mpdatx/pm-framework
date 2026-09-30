@@ -54,7 +54,9 @@ Adopting a project adds:
   generated `docs/roadmap.md` and `docs/site/`;
 - `scripts/pmdocs.py` and `scripts/hooks/pre-commit` (vendored; git's `core.hooksPath`
   points at `scripts/hooks`);
-- two Claude Code hooks in `.claude/settings.json`;
+- `docs/gates.md` for questions only you can answer, with their verdicts;
+- three Claude Code hooks in `.claude/settings.json` (after an edit, at the end of a
+  turn, and at session start — which tells Claude what is waiting on you);
 - a short "Docs duties" section in the project's `CLAUDE.md`.
 
 If `.claude/` is gitignored in that project, `install-hooks` warns you: the Claude hooks

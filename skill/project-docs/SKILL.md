@@ -35,7 +35,8 @@ pre-commit hook (blocks on doc errors, warns on staleness) and from Claude Code 
 3. Add the lines of `SKILL_DIR/assets/gitattributes` to `.gitattributes` (create it if
    absent; skip lines already present).
 4. Copy templates from `SKILL_DIR/assets/templates/`: `index.md`, `product.md`,
-   `architecture.md`, `decisions.md`, `backlog.md`, `backlog-archive.md` → `docs/`;
+   `architecture.md`, `decisions.md`, `backlog.md`, `backlog-archive.md`, `gates.md`,
+   `gates-archive.md` → `docs/`;
    `pmdocs.toml` → `docs/` with `PROJECT` replaced by the directory name; `TODO.md` → the
    project root, only if absent.
 5. Fill every `pmdocs:fill` marker from the actual code — read it; don't invent. Remove
@@ -63,7 +64,10 @@ mapping patterns from real migrations.
    (`git config core.hooksPath`, `.git/hooks`, husky/lefthook/pre-commit configs); Claude
    hooks in `.claude/settings*.json`; TODO/backlog files; decision logs; spec and plan
    headers (`**Status:**` lines); documentation rules in `CLAUDE.md`; Markdown outside
-   `docs/` (`git ls-files "*.md"`), grouped by folder.
+   `docs/` (`git ls-files "*.md"`), grouped by folder; and everything **waiting on the
+   user** — "waiting on your eye/ear" sections, pending listening or visual checks,
+   open decisions, "next test set up" notes, even inside data files — plus where
+   verdicts have been recorded so far.
 2. Propose a mapping table — every existing artifact → its fate (kept, converted, merged,
    excluded, retired) — and **stop for the user's approval**. Touch nothing before it.
    Every existing page that is kept gets a **parent** column: which category of the fixed
@@ -83,6 +87,11 @@ mapping patterns from real migrations.
      (closed ones → `docs/backlog-archive.md`); loose ideas stay in `TODO.md` for triage.
      If the file is large, ask the user which they prefer.
    - Decision logs → `docs/decisions.md` as `## Dnn. Title`, keeping existing numbers.
+   - Each question still waiting on the user → a gate in `docs/gates.md` (`## Gnn.`,
+     `Status: waiting`), with its setup, pass condition and evidence; work blocked on it
+     → `Status: blocked · Gate: Gnn`. Recent answered ones may become archived gates with
+     their verdicts. Detailed verdict logs already kept elsewhere stay where they are,
+     linked as evidence; statements that restate a verdict elsewhere become "see Gnn".
    - Approved outside-`docs/` groups → `[[site.extra]]` entries in `docs/pmdocs.toml`
      (they stay where they are; the site renders them with their source path shown).
 5. Retire conflicting tooling (old builders, hooks, `core.hooksPath`) only with explicit
@@ -130,7 +139,9 @@ Moves items from the user's `TODO.md` inbox into `docs/backlog.md`.
    leave the rest of `CLAUDE.md` untouched.
 4. Resolve what the new version flags in `check`, with the user. Moving to 0.2.0 or later:
    delete `[site] nav` from `docs/pmdocs.toml` (an ERROR now), and propose a `parent:` for
-   every page that warns "no parent" — one table, approved before you edit.
+   every page that warns "no parent" — one table, approved before you edit. Moving to
+   0.3.0 or later: copy `gates.md` and `gates-archive.md` from the templates if absent,
+   and propose gates for anything currently waiting on the user (adopt step 1's list).
 5. Commit (`chore: update pmdocs to <version>`).
 
 ## Everyday duties
@@ -154,6 +165,19 @@ Moves items from the user's `TODO.md` inbox into `docs/backlog.md`.
   silently. Default: append a one-line note to `TODO.md` (`- noted while <task>: …`). If
   the what and why are already clear, offer a drafted backlog item instead. Offer once,
   briefly, at a natural pause; the user decides.
+- Gates — questions only the user can answer (a look, a listen, an approval, a
+  decision) live in `docs/gates.md`:
+  - When you hand the user something to judge, open a gate first: `## Gnn. <the
+    question>`, `Status: waiting · Asked: <today> · For: Bnn · Needs: <preconditions>`,
+    then Setup, "Passes if", Evidence. Work that can't proceed → `Status: blocked · Gate: Gnn`.
+  - When the user gives a verdict, record it in the gate **at once, verbatim**:
+    `- YYYY-MM-DD — "<their words>" — pass/fail/unclear. Checked: <preconditions>`,
+    then set `Status: answered` (the hook archives it) and unblock the work.
+  - Everywhere else — specs (`gates: [Gnn]`), backlog, CLAUDE.md, commits — refer to
+    the gate by ID; never restate the verdict. A retraction is a new dated line in the
+    gate, which goes back to `waiting`.
+  - Each session starts with a note listing open gates; raise the relevant ones with
+    the user rather than waiting to be asked.
 - Before finishing: `uv run scripts/pmdocs.py check`.
 
 ## Red flags
@@ -164,5 +188,6 @@ Moves items from the user's `TODO.md` inbox into `docs/backlog.md`.
 | "The hook only warned, so it's fine" | Warnings are the judgment tier. Judge them. |
 | "I'll tidy the user's TODO.md while I'm here" | It's their inbox. Append only; triage with approval. |
 | "That's out of scope, I'll just mention it" | A mention scrolls away. Offer to capture it in `TODO.md` or the backlog. |
+| "The user said it looked right; I'll note it in the spec and CLAUDE.md" | Record it once, in the gate, verbatim. Everything else says "see Gnn". |
 | "PMDOCS_SKIP=1 gets me past this" | Only when the user says so. Fix the doc error. |
 | "The plan's checkboxes show progress" | They don't. Status lives in frontmatter and the backlog. |

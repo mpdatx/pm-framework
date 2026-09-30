@@ -49,6 +49,7 @@ img,svg{max-width:100%}
 <nav class="side"><a class="site" href="index.html">pm-framework</a>
 <ul>
 <li><a href="index.html">Overview</a><ul class="children"><li><a href="install.html">Install</a></li></ul></li>
+<li><a href="gates.html">Waiting on you</a></li>
 <li><a href="roadmap.html">Roadmap</a></li>
 <li><a href="backlog.html">Backlog</a></li>
 <li><a href="product.html">Product</a></li>
@@ -68,12 +69,13 @@ img,svg{max-width:100%}
 </ul>
 <ul class="continued">
 <li><a href="backlog-archive.html">Backlog archive</a></li>
+<li><a href="gates-archive.html">Gates archive</a></li>
 </ul>
 </nav>
 <main>
 <h1>Decisions</h1>
 <p class="summary">Why project-docs is the way it is. Records are never rewritten; superseded ones are marked.</p>
-<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#d01-vendor-the-tool-into-each-project">D01. Vendor the tool into each project</a></li><li class="l2"><a href="#d02-status-in-frontmatter-plus-a-generated-roadmap">D02. Status in frontmatter plus a generated roadmap</a></li><li class="l2"><a href="#d03-tiered-enforcement">D03. Tiered enforcement</a></li><li class="l2"><a href="#d04-exit-code-10-means-block">D04. Exit code 10 means &quot;block&quot;</a></li><li class="l2"><a href="#d05-build-from-the-index">D05. Build from the index</a></li><li class="l2"><a href="#d06-todomd-is-the-users-inbox">D06. TODO.md is the user&#x27;s inbox</a></li><li class="l2"><a href="#d07-the-tool-exempts-its-own-vendored-files">D07. The tool exempts its own vendored files</a></li><li class="l2"><a href="#d08-other-projects-consume-releases-not-the-working-tree">D08. Other projects consume releases, not the working tree</a></li><li class="l2"><a href="#d09-a-fixed-sidebar-project-pages-attach-with-parent">D09. A fixed sidebar; project pages attach with parent:</a></li></ul></details>
+<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#d01-vendor-the-tool-into-each-project">D01. Vendor the tool into each project</a></li><li class="l2"><a href="#d02-status-in-frontmatter-plus-a-generated-roadmap">D02. Status in frontmatter plus a generated roadmap</a></li><li class="l2"><a href="#d03-tiered-enforcement">D03. Tiered enforcement</a></li><li class="l2"><a href="#d04-exit-code-10-means-block">D04. Exit code 10 means &quot;block&quot;</a></li><li class="l2"><a href="#d05-build-from-the-index">D05. Build from the index</a></li><li class="l2"><a href="#d06-todomd-is-the-users-inbox">D06. TODO.md is the user&#x27;s inbox</a></li><li class="l2"><a href="#d07-the-tool-exempts-its-own-vendored-files">D07. The tool exempts its own vendored files</a></li><li class="l2"><a href="#d08-other-projects-consume-releases-not-the-working-tree">D08. Other projects consume releases, not the working tree</a></li><li class="l2"><a href="#d09-a-fixed-sidebar-project-pages-attach-with-parent">D09. A fixed sidebar; project pages attach with parent:</a></li><li class="l2"><a href="#d10-gates-work-waiting-on-the-user-is-recorded-once-by-id">D10. Gates: work waiting on the user is recorded once, by ID</a></li></ul></details>
 
 <h2 id="d01-vendor-the-tool-into-each-project">D01. Vendor the tool into each project</h2>
 <p><strong>Context.</strong> The tool must run in every clone, worktree and machine of an adopting project.
@@ -146,6 +148,25 @@ project's own documentation still fits, as sub-pages of the categories it belong
 Frontmatter rather than folders, so adoption moves no files and breaks no links.
 <strong>Consequences.</strong> Projects can order pages only among siblings (<code>order</code>). Updating to
 0.2.0 means deleting <code>nav</code> and giving each project page a parent.</p>
+<h2 id="d10-gates-work-waiting-on-the-user-is-recorded-once-by-id">D10. Gates: work waiting on the user is recorded once, by ID</h2>
+<p><strong>Context.</strong> In two surveyed projects, work waiting on the user's eye or ear had no
+home: the most important pending listening test existed only inside a JSON notes
+string; a &quot;waiting on your eye&quot; list mixed user questions with engineering items; a
+single verdict was restated in five places, three of which contradicted it; nothing
+told a new session what the user still had to answer, and questions sat for up to two
+weeks.
+<strong>Decision.</strong> A gate (<code>## Gnn.</code> in <code>docs/gates.md</code>) records one question only the user
+can answer — status, date asked, preconditions, setup, pass condition, evidence — and
+its dated, verbatim verdicts. Answered gates are archived. Specs and backlog items
+reference gates by ID; drift checks catch a spec shipped while its gate waits and work
+still blocked on an answered gate. The roadmap leads with &quot;Waiting on you&quot;, a
+SessionStart hook briefs each new session, and the Stop note counts open gates for the user.
+<strong>Why.</strong> One record per question removes the multi-place drift; a named state makes
+&quot;waiting on the user&quot; visible instead of implied; recording the verdict at once, in the
+user's words, stops it living only in chat.
+<strong>Consequences.</strong> Agents must open a gate before handing something to the user and
+record verdicts immediately. Adopting or updating to 0.3.0 means mapping existing
+waiting items and verdict logs to gates.</p>
 
 </main>
 </div>

@@ -139,6 +139,18 @@ What and why, acceptance criteria, open questions.
 Consequences** paragraphs. A reversed decision gets `Status: superseded by Dmm` beneath
 its heading; its text is not rewritten. IDs are never reused.
 
+### Gates (amended in 0.3.0, decision D10)
+
+Questions only the user can answer — a look, a listen, an A/B choice, an approval, a
+decision — are gates: `## Gnn.` records in `docs/gates.md` with `Status: waiting |
+answered | dropped`, `Asked`, optional `For` (B/G-ids) and `Needs` (preconditions),
+then Setup, "Passes if", Evidence and a `### Verdicts` list of dated, verbatim lines.
+Answered and dropped gates move to `docs/gates-archive.md`. Specs list `gates: [Gnn]`;
+blocked backlog items carry `Gate: Gnn`. Drift: a spec shipped while one of its gates
+waits; an item blocked on an answered gate; an answered gate with no verdict. The
+roadmap opens with "Waiting on you"; a SessionStart hook gives each new Claude session
+the open gates and in-flight backlog items; the Stop note counts open gates for the user.
+
 ### Inbox: `TODO.md`
 
 - Lives at the repo root. Belongs to the user.

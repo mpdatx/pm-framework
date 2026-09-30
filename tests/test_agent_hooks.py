@@ -81,6 +81,49 @@ def test_stop_does_not_reinvoke_agent_when_already_continuing(repo):
     assert "hookSpecificOutput" not in out
 
 
+GATES = ("---\ntitle: Waiting on you\n---\n\n# Waiting on you\n\n"
+         "## G04. Pass 8: does Dry/Wet alone explain it?\n"
+         "Status: waiting · Asked: 2026-09-28 · Needs: Live running\n")
+BACKLOG = ("---\ntitle: Backlog\n---\n\n# Backlog\n\n"
+           "## B03. Decide the patch\nStatus: blocked · Added: 2026-09-27 · Gate: G04\n\n"
+           "## B05. Capture drones\nStatus: in-progress · Added: 2026-09-27\n\n"
+           "## B06. Someday\nStatus: open · Added: 2026-09-27\n")
+
+
+def test_session_start_tells_the_agent_what_is_in_flight(repo):
+    write(repo, "docs/gates.md", GATES)
+    write(repo, "docs/backlog.md", BACKLOG)
+    write(repo, "TODO.md", "- an idea\n")
+    r = run_cli(repo, "hook", "session-start", input=json.dumps({"cwd": str(repo), "source": "startup"}))
+    assert r.returncode == 0
+    out = json.loads(r.stdout)["hookSpecificOutput"]
+    assert out["hookEventName"] == "SessionStart"
+    ctx = out["additionalContext"]
+    assert "G04 Pass 8: does Dry/Wet alone explain it? (needs: Live running; asked 2026-09-28)" in ctx
+    assert "B05 Capture drones (in-progress)" in ctx and "B03 Decide the patch (blocked on G04)" in ctx
+    assert "B06" not in ctx
+    assert "1 inbox item(s) in TODO.md" in ctx
+    assert "record their words" in ctx  # the duty travels with the list
+
+
+def test_session_start_silent_when_nothing_is_in_flight(repo):
+    r = run_cli(repo, "hook", "session-start", input=json.dumps({"cwd": str(repo)}))
+    assert r.returncode == 0 and r.stdout == ""
+
+
+def test_session_start_outside_project_is_silent(tmp_path):
+    r = run_cli(tmp_path, "hook", "session-start", input="{}")
+    assert r.returncode == 0 and r.stdout == ""
+
+
+def test_stop_tells_the_user_about_waiting_gates(repo):
+    write(repo, "docs/gates.md", GATES)
+    commit_all(repo)
+    out = json.loads(run_cli(repo, "hook", "stop", input=json.dumps({"cwd": str(repo)})).stdout)
+    assert "1 gate(s) waiting on you" in out["systemMessage"]
+    assert "hookSpecificOutput" not in out  # not re-invoking the agent over it
+
+
 def test_stop_silent_when_clean(repo):
     mapped(repo)
     commit_all(repo)

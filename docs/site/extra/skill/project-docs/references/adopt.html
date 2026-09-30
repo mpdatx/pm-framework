@@ -49,6 +49,7 @@ img,svg{max-width:100%}
 <nav class="side"><a class="site" href="../../../../index.html">pm-framework</a>
 <ul>
 <li><a href="../../../../index.html">Overview</a><ul class="children"><li><a href="../../../../install.html">Install</a></li></ul></li>
+<li><a href="../../../../gates.html">Waiting on you</a></li>
 <li><a href="../../../../roadmap.html">Roadmap</a></li>
 <li><a href="../../../../backlog.html">Backlog</a></li>
 <li><a href="../../../../product.html">Product</a></li>
@@ -68,6 +69,7 @@ img,svg{max-width:100%}
 </ul>
 <ul class="continued">
 <li><a href="../../../../backlog-archive.html">Backlog archive</a></li>
+<li><a href="../../../../gates-archive.html">Gates archive</a></li>
 </ul>
 </nav>
 <main>
@@ -173,6 +175,26 @@ CONTRIBUTING, CHANGELOG, <code>adr/</code>, a skill's own files. Decide per fold
 <tr>
 <td>An existing architecture overview / decision log</td>
 <td>becomes <code>architecture.md</code> / <code>decisions.md</code> itself</td>
+</tr>
+<tr>
+<td>A &quot;waiting on your eye/ear&quot; section, a pending visual or listening check</td>
+<td>one gate each (<code>Status: waiting</code>); non-user items found there go to the backlog</td>
+</tr>
+<tr>
+<td>A &quot;needs a decision&quot; item, or options (1)/(2) awaiting a choice</td>
+<td>a gate; the options go under Setup</td>
+</tr>
+<tr>
+<td>A &quot;next test set up&quot; note buried in a data file or notes string</td>
+<td>a gate whose Evidence points at that file</td>
+</tr>
+<tr>
+<td>A verdict restated in a spec status, CLAUDE.md and TODO</td>
+<td>recorded once in its gate; the restatements become &quot;see Gnn&quot;</td>
+</tr>
+<tr>
+<td>A detailed verdict log kept beside the artifact (e.g. a <code>sources.md</code> listening log)</td>
+<td>stays where it is; the gate links it as Evidence</td>
 </tr>
 </tbody>
 </table>
