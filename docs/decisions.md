@@ -1,0 +1,81 @@
+---
+title: Decisions
+summary: Why project-docs is the way it is. Records are never rewritten; superseded ones are marked.
+order: 30
+---
+
+# Decisions
+
+## D01. Vendor the tool into each project
+
+**Context.** The tool must run in every clone, worktree and machine of an adopting project.
+**Decision.** The skill copies a versioned single file into `scripts/pmdocs.py`.
+**Why.** Projects stay self-contained; a central path couples every project to this
+machine; an installed CLI needs an install step on every clone.
+**Consequences.** Updating means re-running the skill's update workflow.
+
+## D02. Status in frontmatter plus a generated roadmap
+
+**Context.** The surveyed projects kept status in 3–5 places that drifted apart.
+**Decision.** Specs and plans carry `status:` frontmatter; a backlog holds B-nn items; the
+roadmap is generated from both and lists drift.
+**Why.** One mechanically checked source per fact.
+**Consequences.** Specs written by other skills need frontmatter; the hook adds a draft header.
+
+## D03. Tiered enforcement
+
+**Context.** Every surveyed project was warn-only and still drifted; blocking on judgment
+calls adds friction to every refactor.
+**Decision.** Mechanical problems block or are auto-fixed; staleness warns.
+**Why.** Mechanical errors have exactly one right fix; staleness needs judgment.
+**Consequences.** The agent must act on warnings — the skill's red flags say so.
+
+## D04. Exit code 10 means "block"
+
+**Context.** `uv` and Python exit 1 or 2 on their own failures.
+**Decision.** Only exit 10 from the tool blocks a commit.
+**Why.** A broken tool must never stop someone from committing.
+**Consequences.** Hooks written by hand to chain pmdocs must test for 10.
+
+## D05. Build from the index
+
+**Context.** A surveyed project rebuilt from the working tree, so partial commits carried
+HTML for Markdown that wasn't committed.
+**Decision.** The pre-commit hook exports the index to a temp dir and builds there.
+**Why.** The commit's HTML matches exactly the Markdown in the commit.
+**Consequences.** Links out of `docs/` are resolved against the working tree.
+
+## D06. TODO.md is the user's inbox
+
+**Context.** Users jot ideas ad hoc; in a surveyed project, agents rewriting that file lost notes.
+**Decision.** `TODO.md` is free-form and user-owned; items move to the backlog only
+through triage with approval.
+**Why.** Capture must stay frictionless; the backlog must stay specified.
+**Consequences.** The tool only counts inbox items and never blocks on them.
+
+## D07. The tool exempts its own vendored files
+
+**Context.** In the pilot project a broad map (`scripts/** -> code-layout.md`) matched
+the vendored `scripts/pmdocs.py`, so every `update` commit warned that docs were stale (B07).
+**Decision.** Staleness and coverage skip `scripts/pmdocs.py` and
+`scripts/hooks/pre-commit`, built into the tool rather than configured per project.
+**Why.** The fix then reaches every adopted project with the next update, and no project
+has to remember an exclusion; those files are documented by pm-framework, not by the
+project that vendors them.
+**Consequences.** A project that deliberately edits its vendored copy gets no staleness
+warning for it — but the header already says not to edit it.
+
+## D08. Other projects consume releases, not the working tree
+
+**Context.** The installed skill linked this repository's working tree, so unsaved edits
+to `SKILL.md` and unreleased `pmdocs.py` copies were live in every session and could be
+vendored mid-change; `VERSION` was bumped as work happened (B08).
+**Decision.** A `release` branch checked out as a gitignored worktree at `.release/`;
+`scripts/release.py` tags `v<VERSION>` from a clean, tested, synced `master` and
+fast-forwards it. `install.py` links the release by default; `--dev` is an explicit
+opt-in.
+**Why.** A worktree inside the repo adds no second project-like directory beside it; a
+branch plus tags gives a history of exactly what was shipped; nothing in the skill's
+workflows had to change, because they already read from the installed directory.
+**Consequences.** Changes reach other projects only after `release.py`. Testing a skill
+change in another project before release needs `install.py --dev` (and a later re-install).

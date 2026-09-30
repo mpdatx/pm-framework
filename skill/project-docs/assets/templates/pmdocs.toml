@@ -1,0 +1,24 @@
+# pmdocs configuration — see the project-docs skill.
+[site]
+title = "PROJECT"
+# Optional sidebar order: page paths and group names ("Specs", "Plans", or a docs/
+# subfolder's title). May be partial; unlisted pages follow by their `order`.
+# nav = ["docs/index.md", "docs/roadmap.md", "docs/backlog.md", "Specs", "Plans"]
+
+[paths]
+specs = "docs/superpowers/specs"
+plans = "docs/superpowers/plans"
+# Markdown under docs/ that is not part of the convention: not validated, not rendered.
+exclude = []
+
+# One [[map]] per area of the code: when files matching `paths` change,
+# at least one of `pages` should change in the same commit. All paths are relative to
+# the repository root; a page may live outside docs/ (e.g. "LICENSE.md", "CONTRIBUTING.md").
+[[map]]
+paths = ["src/**"]
+pages = ["docs/architecture.md"]
+
+# Tracked files matching `include` (minus `exclude`) should be covered by some [[map]].
+[coverage]
+include = ["src/**"]
+exclude = []

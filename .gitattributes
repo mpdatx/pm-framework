@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+# pmdocs: generated and vendored files are always LF, so builds match on every OS
+# and the sh hook's #! line is never broken by CRLF.
+docs/site/**/*.html text eol=lf
+docs/roadmap.md text eol=lf
+scripts/pmdocs.py text eol=lf
+scripts/hooks/* text eol=lf

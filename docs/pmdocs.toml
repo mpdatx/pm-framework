@@ -1,0 +1,22 @@
+[site]
+title = "pm-framework"
+# Sidebar order: status first, then reference, then history.
+nav = ["docs/index.md", "docs/roadmap.md", "docs/backlog.md", "docs/product.md",
+       "docs/architecture.md", "docs/decisions.md", "Specs", "docs/backlog-archive.md"]
+
+[paths]
+specs = "docs/superpowers/specs"
+plans = "docs/superpowers/plans"
+exclude = []
+
+[[map]]
+paths = ["tool/**", "scripts/sync_assets.py", "scripts/release.py", "install.py"]
+pages = ["docs/architecture.md"]
+
+[[map]]
+paths = ["skill/project-docs/SKILL.md", "skill/project-docs/references/**", "skill/project-docs/assets/templates/**", "skill/project-docs/assets/claude-md-snippet.md"]
+pages = ["docs/product.md"]
+
+[coverage]
+include = ["tool/**", "skill/**", "scripts/**", "install.py"]
+exclude = ["scripts/pmdocs.py", "scripts/hooks/**", "skill/project-docs/assets/pmdocs.py", "skill/project-docs/assets/hooks/**", "skill/project-docs/assets/gitattributes"]

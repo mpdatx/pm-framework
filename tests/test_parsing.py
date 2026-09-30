@@ -1,0 +1,82 @@
+import pmdocs
+
+BACKLOG = """---
+title: Backlog
+---
+
+# Backlog
+
+## B01. First thing
+Status: open · Added: 2026-09-01
+
+Why it matters.
+
+## B7. Second thing
+Status: in-progress | Spec: superpowers/specs/2026-09-02-x-design.md | Added: 2026-09-02
+
+## Notes
+Not an item.
+"""
+
+
+def test_parse_items():
+    items = pmdocs.parse_items(BACKLOG, "docs/backlog.md")
+    assert [i.id for i in items] == ["B01", "B7"]
+    assert [i.key for i in items] == ["B1", "B7"]
+    first, second = items
+    assert first.title == "First thing"
+    assert first.fields == {"Status": "open", "Added": "2026-09-01"}
+    assert second.status == "in-progress"
+    assert second.fields["Spec"] == "superpowers/specs/2026-09-02-x-design.md"
+    lines = BACKLOG.split("\n")
+    assert lines[first.start] == "## B01. First thing"
+    assert lines[first.meta_line] == "Status: open · Added: 2026-09-01"
+    assert lines[first.end] == "## B7. Second thing"
+    assert lines[second.end] == "## Notes"
+
+
+def test_item_without_meta_line():
+    [it] = pmdocs.parse_items("## B03. Bare\n\nJust prose.\n", "docs/backlog.md")
+    assert it.meta_line is None and it.fields == {} and it.status is None
+
+
+def test_status_is_lowercased():
+    [it] = pmdocs.parse_items("## B01. X\nStatus: Done · Added: 2026-09-01\n", "f")
+    assert it.status == "done"
+
+
+def test_decisions_parse():
+    [d] = pmdocs.parse_items("## D12. Use uv\nStatus: superseded by D14\n\nContext.\n",
+                             "docs/decisions.md", pmdocs.DECISION_HEAD)
+    assert d.key == "D12" and d.fields["Status"] == "superseded by D14"
+
+
+def test_id_key():
+    assert pmdocs.id_key("B007") == "B7"
+    assert pmdocs.id_key(" D3 ") == "D3"
+    assert pmdocs.id_key("weird") == "weird"
+
+
+def test_next_id():
+    items = pmdocs.parse_items(BACKLOG, "docs/backlog.md")
+    assert pmdocs.next_id(items) == "B08"
+    assert pmdocs.next_id([]) == "B01"
+
+
+def test_inbox_counts_top_level_list_items():
+    text = "# TODO\n\n- one\n  - nested detail\n- [ ] two\n* three\n1. four\n"
+    assert pmdocs.count_inbox(text) == 4
+
+
+def test_inbox_counts_paragraphs_when_no_list():
+    assert pmdocs.count_inbox("# TODO\n\nfix the thing\nsoon\n\nanother idea\n") == 2
+
+
+def test_inbox_template_is_empty():
+    text = ("# TODO\n\n<!-- Inbox: jot anything here, any format.\n"
+            "     - not an item -->\n")
+    assert pmdocs.count_inbox(text) == 0
+
+
+def test_inbox_crlf():
+    assert pmdocs.count_inbox("- a\r\n- b\r\n") == 2

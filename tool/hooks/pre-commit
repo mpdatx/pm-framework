@@ -1,0 +1,18 @@
+#!/bin/sh
+# pmdocs pre-commit hook — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
+# Blocks the commit only when pmdocs reports a documentation error (exit 10).
+# Anything else — uv missing, a tool crash — lets the commit through with a message.
+[ "$PMDOCS_SKIP" = "1" ] && exit 0
+if ! command -v uv >/dev/null 2>&1; then
+  echo "pmdocs: uv not found; docs not checked (install uv to enable)" >&2
+  exit 0
+fi
+uv run --quiet scripts/pmdocs.py hook pre-commit
+status=$?
+if [ "$status" -eq 10 ]; then
+  exit 1
+fi
+if [ "$status" -ne 0 ]; then
+  echo "pmdocs: tool failed (exit $status); commit allowed" >&2
+fi
+exit 0

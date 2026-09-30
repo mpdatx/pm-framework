@@ -1,0 +1,110 @@
+# The project-docs convention
+
+## Layout
+
+```
+TODO.md                  inbox — user-owned, free-form
+docs/
+  pmdocs.toml            config and doc-map
+  index.md               overview + "what to read when"
+  product.md             purpose, capabilities, non-goals
+  architecture.md        components and code pointers (may grow into architecture/*.md)
+  decisions.md           ## Dnn. records
+  backlog.md             open work, ## Bnn. items
+  backlog-archive.md     closed items (moved, never deleted)
+  roadmap.md             GENERATED
+  superpowers/specs/     specs
+  superpowers/plans/     plans
+  site/                  GENERATED HTML, committed
+scripts/pmdocs.py        vendored tool
+scripts/hooks/pre-commit vendored git hook (core.hooksPath = scripts/hooks)
+.claude/settings.json    PostToolUse + Stop hooks (merged by install-hooks)
+```
+
+## Frontmatter (YAML, between `---` lines)
+
+Every page under `docs/` except generated files and `[paths] exclude` globs needs a
+`title`. Optional on any page: `summary` (shown under the title), `order` (nav position,
+default 50).
+
+Only `backlog.md`, `backlog-archive.md`, `decisions.md`, `roadmap.md` (generated) and
+`index.md` (the site's home) have fixed names; every other page is the project's own.
+To control the sidebar fully — including the generated roadmap and the Specs/Plans
+groups — list pages and group names in `[site] nav` in `pmdocs.toml`. The list may be
+partial; unlisted pages follow in the default order. An entry that is neither a page nor
+a group is an ERROR.
+
+## Doc-map
+
+`[[map]]` entries in `pmdocs.toml` pair source globs (`paths`) with the pages that
+describe them (`pages`). Every path is relative to the repository root, and a page may
+live outside `docs/` — a `LICENSE.md`, `CONTRIBUTING.md` or provenance table is often the
+page that must change with a source directory. Such pages are checked for staleness but
+not rendered into the site.
+
+Specs add `status` (`draft | approved | in-progress | shipped | superseded | abandoned`),
+`created`, `backlog` (list of B-ids) and, when superseded, `superseded_by` (a
+docs/-relative path). Plans add `status` (`draft | approved | in-progress | shipped |
+abandoned`) and optionally `spec` (a docs/-relative path). There is no `updated`
+field — git history is the authority.
+
+## Backlog items
+
+```
+## B07. Title
+Status: in-progress · Spec: superpowers/specs/2026-09-29-x-design.md · Added: 2026-09-20 · Source: TODO.md
+
+Free prose: what and why, acceptance criteria, open questions.
+```
+
+- `Status` (`open | in-progress | blocked | done | dropped`) and `Added` are required.
+- `Spec`, `Source` and `Closed` are optional. Separator ` · ` (`|` also accepted).
+- IDs are never reused; the next is max(backlog ∪ archive) + 1. `B7` and `B07` are the same item.
+
+## Decisions
+
+`## Dnn. Title`, then **Context / Decision / Why / Consequences**. A reversed decision
+gets `Status: superseded by Dmm` directly under its heading; its text is not rewritten.
+
+## Inbox
+
+`TODO.md` at the root belongs to the user. Any format. Agents append, never rewrite.
+Items leave only through triage, with approval. The tool only counts items.
+
+## Checks and tiers
+
+| Finding | Tier |
+|---|---|
+| Missing/invalid frontmatter or title; status outside vocabulary | ERROR (blocks commit) |
+| Broken link or anchor; missing B-id, D-id, spec or plan reference; duplicate ID | ERROR |
+| Open item in the archive; `[[map]]` page missing | ERROR |
+| Spec/plan without frontmatter | FIXED by the hook (draft header), else ERROR |
+| Done/dropped item still in the backlog | FIXED by the hook (moved to archive) |
+| Code changed but none of its mapped pages did | WARN |
+| Tracked source file not covered by any `[[map]]` | WARN |
+| Spec draft while its plan moved; plan shipped but spec not; spec shipped but backlog item open | WARN |
+| `pmdocs:fill` marker left in a page | WARN |
+| Item in-progress >30 days without a touching commit | WARN (`check` only) |
+
+Plan checkboxes are never read. The vendored `scripts/pmdocs.py` and
+`scripts/hooks/pre-commit` are exempt from staleness and coverage: they change on every
+update and are documented by pm-framework, so no `[[map]]` needs to exclude them.
+
+## Tool
+
+| Command | Purpose |
+|---|---|
+| `build [--check]` | Roadmap + site. `--check` exits 1 if stale, writes nothing. |
+| `check [--staged] [--fix]` | All checks. Exit 1 on any ERROR. `--fix` applies FIXED-tier fixes. |
+| `hook pre-commit` | Fix → check index → block (exit 10) or build from the index and stage the site. |
+| `hook post-edit` / `hook stop` | Claude Code hooks; never block. |
+| `install-hooks [--status\|--uninstall]` | `core.hooksPath` + `.claude/settings.json`. |
+| `version` | Vendored version. |
+
+Bypass the git hook once with `PMDOCS_SKIP=1 git commit …` or `git commit --no-verify`.
+
+After `git commit <paths>` (or `-o`), the commit itself is right — its HTML matches the
+Markdown it contains — but git keeps the real index locked during such a commit, so the
+hook cannot stage the rebuilt site there. `git status` then shows `docs/site/` as
+modified. Run `git add docs/site docs/roadmap.md` (or just make the next commit normally)
+before any `--no-verify` commit, or that commit would carry the older site.
