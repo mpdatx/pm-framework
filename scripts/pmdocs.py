@@ -2,6 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["markdown-it-py>=3.0", "pyyaml>=6.0"]
 # ///
+# SPDX-License-Identifier: MIT — Copyright (c) 2026 Matthew Daniels — https://github.com/mpdatx/pm-framework
 """pmdocs 0.1.9 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
 
 Keeps a project's docs and work status current: renders docs/ to docs/site/, generates

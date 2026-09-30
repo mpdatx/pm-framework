@@ -31,3 +31,8 @@ In a maintainer's clone the installer links the released skill (`.release/`), ne
 working tree; see [docs/architecture.md](docs/architecture.md#releases).
 
 Docs: [docs/index.md](docs/index.md) (rendered: `docs/site/index.html`).
+
+## License
+
+[MIT](LICENSE). The vendored `scripts/pmdocs.py` and `scripts/hooks/pre-commit` that the
+skill copies into a project carry the same licence line in their headers.

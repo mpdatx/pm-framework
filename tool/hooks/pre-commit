@@ -1,5 +1,6 @@
 #!/bin/sh
 # pmdocs pre-commit hook — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
+# SPDX-License-Identifier: MIT — Copyright (c) 2026 Matthew Daniels — https://github.com/mpdatx/pm-framework
 # Blocks the commit only when pmdocs reports a documentation error (exit 10).
 # Anything else — uv missing, a tool crash — lets the commit through with a message.
 [ "$PMDOCS_SKIP" = "1" ] && exit 0
