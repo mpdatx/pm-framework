@@ -78,5 +78,27 @@ def test_inbox_template_is_empty():
     assert pmdocs.count_inbox(text) == 0
 
 
+def test_inbox_of_only_headings_intro_and_rules_is_empty():
+    # the reported phantom: no list items, so paragraphs were counted — including the
+    # intro above the first heading and the --- rules
+    text = ("This file is my scratch inbox. Jot anything here.\n\n---\n\n"
+            "# TODO\n\n***\n\n## Soon\n\n___\n\n## Later\n")
+    assert pmdocs.count_inbox(text) == 0
+
+
+def test_inbox_counts_paragraphs_only_after_the_first_heading():
+    text = "Intro paragraph, not an item.\n\n# TODO\n\nfix the thing\n\n---\n\nanother idea\n"
+    assert pmdocs.count_inbox(text) == 2
+
+
+def test_inbox_ignores_bullets_inside_code_blocks():
+    text = "# TODO\n\n```\n- not an item\n- nor this\n```\n\n- a real item\n"
+    assert pmdocs.count_inbox(text) == 1
+
+
+def test_inbox_setext_heading_is_a_heading_not_an_item():
+    assert pmdocs.count_inbox("TODO\n----\n\n") == 0
+
+
 def test_inbox_crlf():
     assert pmdocs.count_inbox("- a\r\n- b\r\n") == 2

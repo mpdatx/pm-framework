@@ -147,7 +147,10 @@ gets `Status: superseded by Dmm` directly under its heading; its text is not rew
 ## Inbox
 
 `TODO.md` at the root belongs to the user. Any format. Agents append, never rewrite.
-Items leave only through triage, with approval. The tool only counts items.
+Items leave only through triage, with approval. The tool only counts items: top-level
+list items, or — in a file with no list — the paragraphs after its first heading. Intro
+text above the first heading, `---` rules, comments and code blocks never count, so a
+`TODO.md` of headings alone is empty.
 
 ## Checks and tiers
 

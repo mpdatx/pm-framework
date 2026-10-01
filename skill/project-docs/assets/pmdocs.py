@@ -3,7 +3,7 @@
 # dependencies = ["markdown-it-py>=3.0", "pyyaml>=6.0"]
 # ///
 # SPDX-License-Identifier: MIT — Copyright (c) 2026 Matthew Daniels — https://github.com/mpdatx/pm-framework
-"""pmdocs 0.3.0 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
+"""pmdocs 0.3.1 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
 
 Keeps a project's docs and work status current: renders docs/ to docs/site/, generates
 docs/roadmap.md, validates frontmatter/backlog/links, detects drift and staleness, and
@@ -34,7 +34,7 @@ from urllib.parse import quote, unquote
 import yaml
 from markdown_it import MarkdownIt
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 
 
 class PmdocsError(Exception):
@@ -282,23 +282,21 @@ def next_id(items, prefix: str = "B") -> str:
     return f"{prefix}{(max(nums) + 1) if nums else 1:02d}"
 
 
-INBOX_COMMENT = re.compile(r"<!--.*?-->", re.S)
-LIST_ITEM = re.compile(r"^(?:[-*+]|\d+[.)])\s+\S")
-
-
 def count_inbox(text: str) -> int:
-    """Top-level list items; if there are none, non-heading paragraphs. Comments ignored."""
-    lines = INBOX_COMMENT.sub("", text.replace("\r\n", "\n")).split("\n")
-    bullets = sum(1 for line in lines if LIST_ITEM.match(line))
-    if bullets:
-        return bullets
-    paras, in_para = 0, False
-    for line in lines:
-        content = bool(line.strip()) and not line.lstrip().startswith("#")
-        if content and not in_para:
-            paras += 1
-        in_para = content
-    return paras
+    """Items in a free-form inbox, read the way Markdown reads it (so code blocks, comments,
+    rules and setext underlines are never items).
+
+    Top-level list items if there are any. Otherwise top-level paragraphs — but only those
+    after the first heading when the file has headings, so an intro above the title and
+    `---` rules don't count; a file of headings alone is empty."""
+    tokens = markdown().parse(text.replace("\r\n", "\n"))
+    items = sum(1 for t in tokens if t.type == "list_item_open" and t.level == 1)
+    if items:
+        return items
+    if any(t.type == "heading_open" for t in tokens):
+        first = next(i for i, t in enumerate(tokens) if t.type == "heading_open")
+        tokens = tokens[first:]
+    return sum(1 for t in tokens if t.type == "paragraph_open" and t.level == 0)
 
 # === model ===
 
