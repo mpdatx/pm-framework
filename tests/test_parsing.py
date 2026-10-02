@@ -68,8 +68,23 @@ def test_inbox_counts_top_level_list_items():
     assert pmdocs.count_inbox(text) == 4
 
 
-def test_inbox_counts_paragraphs_when_no_list():
-    assert pmdocs.count_inbox("# TODO\n\nfix the thing\nsoon\n\nanother idea\n") == 2
+def test_inbox_counts_paragraphs_when_no_list_and_no_headings():
+    assert pmdocs.count_inbox("fix the thing\nsoon\n\nanother idea\n") == 2
+
+
+def test_inbox_paragraphs_under_the_title_alone_are_intro():
+    # 0.3.1 still counted a description sentence directly under `# TODO`
+    assert pmdocs.count_inbox("# TODO\n\nA scratch inbox; jot anything here.\n") == 0
+    assert pmdocs.count_inbox("# TODO\n\nfix the thing\n\nanother idea\n") == 0
+
+
+def test_inbox_counts_paragraphs_after_the_first_section_heading():
+    text = "# TODO\n\nA description of this file.\n\n## Soon\n\nfix the thing\n\nanother idea\n"
+    assert pmdocs.count_inbox(text) == 2
+
+
+def test_inbox_without_a_title_its_first_heading_is_a_section():
+    assert pmdocs.count_inbox("## Soon\n\nfix the thing\n") == 1
 
 
 def test_inbox_template_is_empty():
@@ -86,8 +101,9 @@ def test_inbox_of_only_headings_intro_and_rules_is_empty():
     assert pmdocs.count_inbox(text) == 0
 
 
-def test_inbox_counts_paragraphs_only_after_the_first_heading():
-    text = "Intro paragraph, not an item.\n\n# TODO\n\nfix the thing\n\n---\n\nanother idea\n"
+def test_inbox_counts_paragraphs_only_after_the_first_section():
+    text = ("Intro paragraph, not an item.\n\n# TODO\n\nDescription, not an item.\n\n"
+            "## Ideas\n\nfix the thing\n\n---\n\nanother idea\n")
     assert pmdocs.count_inbox(text) == 2
 
 

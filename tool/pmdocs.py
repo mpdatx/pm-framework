@@ -3,7 +3,7 @@
 # dependencies = ["markdown-it-py>=3.0", "pyyaml>=6.0"]
 # ///
 # SPDX-License-Identifier: MIT — Copyright (c) 2026 Matthew Daniels — https://github.com/mpdatx/pm-framework
-"""pmdocs 0.3.1 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
+"""pmdocs 0.3.2 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
 
 Keeps a project's docs and work status current: renders docs/ to docs/site/, generates
 docs/roadmap.md, validates frontmatter/backlog/links, detects drift and staleness, and
@@ -34,7 +34,7 @@ from urllib.parse import quote, unquote
 import yaml
 from markdown_it import MarkdownIt
 
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 
 
 class PmdocsError(Exception):
@@ -286,16 +286,21 @@ def count_inbox(text: str) -> int:
     """Items in a free-form inbox, read the way Markdown reads it (so code blocks, comments,
     rules and setext underlines are never items).
 
-    Top-level list items if there are any. Otherwise top-level paragraphs — but only those
-    after the first heading when the file has headings, so an intro above the title and
-    `---` rules don't count; a file of headings alone is empty."""
+    Top-level list items if there are any. Otherwise top-level paragraphs after the first
+    *section* heading — the first heading after an `# H1` title, or the first heading if
+    it isn't an H1. Anything before that is intro: text above the title, a description
+    under it, `---` rules. A file with headings but no section yields 0; a file with no
+    headings at all counts all its paragraphs (a prose-only inbox)."""
     tokens = markdown().parse(text.replace("\r\n", "\n"))
     items = sum(1 for t in tokens if t.type == "list_item_open" and t.level == 1)
     if items:
         return items
-    if any(t.type == "heading_open" for t in tokens):
-        first = next(i for i, t in enumerate(tokens) if t.type == "heading_open")
-        tokens = tokens[first:]
+    heads = [i for i, t in enumerate(tokens) if t.type == "heading_open"]
+    if heads:
+        sections = heads[1:] if tokens[heads[0]].tag == "h1" else heads
+        if not sections:
+            return 0
+        tokens = tokens[sections[0]:]
     return sum(1 for t in tokens if t.type == "paragraph_open" and t.level == 0)
 
 # === model ===

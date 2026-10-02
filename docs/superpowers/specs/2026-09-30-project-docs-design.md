@@ -160,9 +160,10 @@ the open gates and in-flight backlog items; the Stop note counts open gates for 
 - Items leave the inbox only through **triage** (skill workflow, below), and only after
   the user approves the backlog item that replaces them.
 - The tool counts inbox items, reading the file as Markdown: top-level list items; when
-  there are none, top-level paragraphs — only those after the first heading if the file
-  has headings (so an intro and `---` rules are never items, and a file of headings
-  alone is empty). It reports the count in `check`, the Stop hook and the roadmap, and
+  there are none, top-level paragraphs after the first section heading (the first
+  heading after an `# H1` title). Text above or directly under the title and `---`
+  rules are intro, never items; a file of headings alone is empty; a file with no
+  headings counts all its paragraphs. It reports the count in `check`, the Stop hook and the roadmap, and
   never blocks on the inbox.
 
 ### Drift rules
