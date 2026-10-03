@@ -57,6 +57,7 @@ img,svg{max-width:100%}
 <li><a href="../../../../decisions.html">Decisions</a></li>
 </ul>
 <h2>Specs</h2><ul>
+<li><a href="../../../../superpowers/specs/2026-10-02-doc-roots-design.html">Doc roots — project-docs in subfolders and monorepos</a></li>
 <li><a href="../../../../superpowers/specs/2026-09-30-project-docs-design.html">project-docs — a portable documentation and work-status convention</a></li>
 </ul>
 <h2>The skill</h2><ul>
@@ -80,6 +81,8 @@ img,svg{max-width:100%}
 <details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#layout">Layout</a></li><li class="l2"><a href="#frontmatter-yaml-between-----lines">Frontmatter (YAML, between --- lines)</a></li><li class="l2"><a href="#the-sidebar-fixed">The sidebar (fixed)</a></li><li class="l2"><a href="#doc-map">Doc-map</a></li><li class="l2"><a href="#backlog-items">Backlog items</a></li><li class="l2"><a href="#gates">Gates</a></li><li class="l2"><a href="#decisions">Decisions</a></li><li class="l2"><a href="#inbox">Inbox</a></li><li class="l2"><a href="#checks-and-tiers">Checks and tiers</a></li><li class="l2"><a href="#tool">Tool</a></li></ul></details>
 
 <h2 id="layout">Layout</h2>
+<p>The layout lives at the <strong>repository top</strong> (the doc root must be
+<code>git rev-parse --show-toplevel</code>; <code>install-hooks</code> and <code>check</code> refuse anywhere else for now).</p>
 <pre><code>TODO.md                  inbox — user-owned, free-form
 docs/
   pmdocs.toml            config and doc-map

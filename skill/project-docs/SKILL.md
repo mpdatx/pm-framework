@@ -28,7 +28,10 @@ pre-commit hook (blocks on doc errors, warns on staleness) and from Claude Code 
 ## init
 
 1. Check `git rev-parse --show-toplevel` is the project root and `uv --version` works.
-   If uv is missing, stop and tell the user (https://docs.astral.sh/uv/).
+   If uv is missing, stop and tell the user (https://docs.astral.sh/uv/). If the user
+   wants project-docs for a **subfolder** of a larger repository, stop and say so: this
+   version supports a doc root only at the repository top (`install-hooks` and `check`
+   refuse elsewhere, because staleness and the hooks would silently not work).
 2. Vendor the tool — copy the bytes exactly, they must stay LF:
    - `SKILL_DIR/assets/pmdocs.py` → `scripts/pmdocs.py`
    - `SKILL_DIR/assets/hooks/pre-commit` → `scripts/hooks/pre-commit`

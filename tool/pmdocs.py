@@ -3,7 +3,7 @@
 # dependencies = ["markdown-it-py>=3.0", "pyyaml>=6.0"]
 # ///
 # SPDX-License-Identifier: MIT — Copyright (c) 2026 Matthew Daniels — https://github.com/mpdatx/pm-framework
-"""pmdocs 0.3.2 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
+"""pmdocs 0.3.3 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
 
 Keeps a project's docs and work status current: renders docs/ to docs/site/, generates
 docs/roadmap.md, validates frontmatter/backlog/links, detects drift and staleness, and
@@ -34,7 +34,7 @@ from urllib.parse import quote, unquote
 import yaml
 from markdown_it import MarkdownIt
 
-VERSION = "0.3.2"
+VERSION = "0.3.3"
 
 
 class PmdocsError(Exception):
@@ -695,6 +695,24 @@ def in_work_tree(root: Path) -> bool:
     return git(root, "rev-parse", "--is-inside-work-tree", check=False).strip() == "true"
 
 
+def doc_root_problem(root: Path):
+    """Why this doc root can't work yet, or None. Until doc roots in subfolders are
+    supported, a doc root must be the repository top: below it, git reports paths the
+    doc-map can't match and git's hooks path can't reach the vendored hook — everything
+    would fail silently, so say so instead."""
+    top = git(root, "rev-parse", "--show-toplevel", check=False).strip()
+    if not top:
+        return None
+    try:
+        if os.path.samefile(top, root):
+            return None
+    except OSError:
+        return None
+    return (f"this doc root ({Path(root).resolve()}) must be the repository top ({Path(top).resolve()}): "
+            f"pmdocs {VERSION} does not support a doc root in a subfolder yet — staleness checks "
+            "and the hooks would silently not work there")
+
+
 def changed_files(root: Path, staged: bool) -> set:
     """staged: index vs HEAD. Otherwise: working tree vs HEAD plus untracked files."""
     if staged:
@@ -910,6 +928,9 @@ def doc_findings(model: Model) -> list:
 def repo_findings(cfg: Config, model: Model, staged: bool, now: float) -> list:
     if not in_work_tree(cfg.root):
         return [Finding("INFO", ".", "not a git work tree; staleness and coverage skipped")]
+    problem = doc_root_problem(cfg.root)
+    if problem:
+        return [Finding("ERROR", CONFIG_REL, problem)]
     return staleness(cfg, changed_files(cfg.root, staged)) + coverage(cfg) + drift_stale_progress(model, now)
 
 
@@ -1607,6 +1628,9 @@ def remove_claude_settings(root: Path) -> bool:
 
 
 def install_hooks(root: Path) -> list:
+    problem = doc_root_problem(root)
+    if problem:
+        raise PmdocsError(problem)
     msgs = []
     hook = root / HOOKS_PATH / "pre-commit"
     if not hook.is_file():

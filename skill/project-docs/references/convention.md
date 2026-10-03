@@ -7,6 +7,9 @@ summary: The full convention — file layout, frontmatter, backlog and decision 
 
 ## Layout
 
+The layout lives at the **repository top** (the doc root must be
+`git rev-parse --show-toplevel`; `install-hooks` and `check` refuse anywhere else for now).
+
 ```
 TODO.md                  inbox — user-owned, free-form
 docs/

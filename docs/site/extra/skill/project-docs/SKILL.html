@@ -57,6 +57,7 @@ img,svg{max-width:100%}
 <li><a href="../../../decisions.html">Decisions</a></li>
 </ul>
 <h2>Specs</h2><ul>
+<li><a href="../../../superpowers/specs/2026-10-02-doc-roots-design.html">Doc roots — project-docs in subfolders and monorepos</a></li>
 <li><a href="../../../superpowers/specs/2026-09-30-project-docs-design.html">project-docs — a portable documentation and work-status convention</a></li>
 </ul>
 <h2>The skill</h2><ul>
@@ -121,7 +122,10 @@ pre-commit hook (blocks on doc errors, warns on staleness) and from Claude Code 
 <h2 id="init">init</h2>
 <ol>
 <li>Check <code>git rev-parse --show-toplevel</code> is the project root and <code>uv --version</code> works.
-If uv is missing, stop and tell the user (https://docs.astral.sh/uv/).</li>
+If uv is missing, stop and tell the user (https://docs.astral.sh/uv/). If the user
+wants project-docs for a <strong>subfolder</strong> of a larger repository, stop and say so: this
+version supports a doc root only at the repository top (<code>install-hooks</code> and <code>check</code>
+refuse elsewhere, because staleness and the hooks would silently not work).</li>
 <li>Vendor the tool — copy the bytes exactly, they must stay LF:
 <ul>
 <li><code>SKILL_DIR/assets/pmdocs.py</code> → <code>scripts/pmdocs.py</code></li>
