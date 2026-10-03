@@ -78,11 +78,12 @@ img,svg{max-width:100%}
 <p class="summary">The full convention — file layout, frontmatter, backlog and decision formats, every check and its tier, and the tool&#x27;s commands. The skill loads it before init and adopt.</p>
 <p class="about">These are the project-docs skill&#x27;s own files, as installed into ~/.claude/skills/project-docs. SKILL.md is what Claude reads when the skill triggers; the convention and adoption references are loaded on demand during init and adopt.</p>
 <p class="meta source">Source: <a href="../../../../../../skill/project-docs/references/convention.md"><code>skill/project-docs/references/convention.md</code></a> — outside <code>docs/</code>, rendered here for reading.</p>
-<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#layout">Layout</a></li><li class="l2"><a href="#frontmatter-yaml-between-----lines">Frontmatter (YAML, between --- lines)</a></li><li class="l2"><a href="#the-sidebar-fixed">The sidebar (fixed)</a></li><li class="l2"><a href="#doc-map">Doc-map</a></li><li class="l2"><a href="#backlog-items">Backlog items</a></li><li class="l2"><a href="#gates">Gates</a></li><li class="l2"><a href="#decisions">Decisions</a></li><li class="l2"><a href="#inbox">Inbox</a></li><li class="l2"><a href="#checks-and-tiers">Checks and tiers</a></li><li class="l2"><a href="#tool">Tool</a></li></ul></details>
+<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#layout">Layout</a></li><li class="l2"><a href="#doc-roots">Doc roots</a></li><li class="l2"><a href="#frontmatter-yaml-between-----lines">Frontmatter (YAML, between --- lines)</a></li><li class="l2"><a href="#the-sidebar-fixed">The sidebar (fixed)</a></li><li class="l2"><a href="#doc-map">Doc-map</a></li><li class="l2"><a href="#backlog-items">Backlog items</a></li><li class="l2"><a href="#gates">Gates</a></li><li class="l2"><a href="#decisions">Decisions</a></li><li class="l2"><a href="#inbox">Inbox</a></li><li class="l2"><a href="#checks-and-tiers">Checks and tiers</a></li><li class="l2"><a href="#tool">Tool</a></li></ul></details>
 
 <h2 id="layout">Layout</h2>
-<p>The layout lives at the <strong>repository top</strong> (the doc root must be
-<code>git rev-parse --show-toplevel</code>; <code>install-hooks</code> and <code>check</code> refuse anywhere else for now).</p>
+<p>The layout lives at a <strong>doc root</strong> — the repository top, or a subfolder for one project
+inside a larger repository (see <a href="#doc-roots">Doc roots</a>). All paths below are relative
+to it.</p>
 <pre><code>TODO.md                  inbox — user-owned, free-form
 docs/
   pmdocs.toml            config and doc-map
@@ -102,6 +103,29 @@ scripts/pmdocs.py        vendored tool
 scripts/hooks/pre-commit vendored git hook (core.hooksPath = scripts/hooks)
 .claude/settings.json    PostToolUse, Stop and SessionStart hooks (merged by install-hooks)
 </code></pre>
+<h2 id="doc-roots">Doc roots</h2>
+<p>A doc root is any folder containing <code>docs/pmdocs.toml</code>. A repository may hold several:
+one at the top, one per package, or both.</p>
+<ul>
+<li><strong>Everything is relative to the doc root.</strong> Doc-map paths and pages, <code>[coverage]</code>,
+<code>[[site.extra]]</code>, <code>TODO.md</code>, the README, the site, the backlog and the gates. A
+configured path that leaves the doc root (<code>../…</code>) is an ERROR; shared code is
+documented by the doc root that contains it.</li>
+<li><strong>Nested doc roots own their subtree.</strong> A doc root inside another — <code>packages/a/</code>
+under a top-level umbrella — takes its files out of the outer one's pages, coverage
+and staleness. Nothing needs excluding by hand.</li>
+<li><strong>One git hook serves the whole repository.</strong> The vendored <code>scripts/hooks/pre-commit</code>
+is a dispatcher: it runs every doc root's own tool for the doc roots a commit
+touches, and blocks if any reports an error. <code>core.hooksPath</code> points at whichever doc
+root installed first; the others reuse it (<code>install-hooks --status</code> lists the doc
+roots it covers).</li>
+<li><strong>Claude Code hooks live in the repository top's <code>.claude/settings.json</code></strong>, one set
+per doc root. Each finds its tool through git
+(<code>&quot;$(git rev-parse --show-toplevel)/&lt;doc root&gt;/scripts/pmdocs.py&quot;</code>) and answers only
+for its own project; with several doc roots, their notes carry the project's
+<code>[site] title</code>.</li>
+<li><strong>Inbox, backlog, gates and roadmap are per doc root.</strong></li>
+</ul>
 <h2 id="frontmatter-yaml-between-----lines">Frontmatter (YAML, between <code>---</code> lines)</h2>
 <p>Every page under <code>docs/</code> except generated files and <code>[paths] exclude</code> globs needs a
 <code>title</code>. Optional on any page: <code>summary</code> (shown under the title), <code>order</code> (position among

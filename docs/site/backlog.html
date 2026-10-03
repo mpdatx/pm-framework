@@ -77,18 +77,6 @@ img,svg{max-width:100%}
 <h1>Backlog</h1>
 <p class="summary">Open work. Closed items move to the archive.</p>
 
-<h2 id="b09-doc-roots-project-docs-in-subfolders-and-monorepos">B09. Doc roots: project-docs in subfolders and monorepos</h2>
-<p>Status: open · Spec: superpowers/specs/2026-10-02-doc-roots-design.md · Added: 2026-10-02</p>
-<p>Today a project in a subfolder of a larger repo fails silently: staleness never fires
-(git paths are repo-top-relative), the git hook is installed where git never looks, and
-Claude Code hooks assume Claude was launched in the project folder. The spec defines doc
-roots (any folder with <code>docs/pmdocs.toml</code>, nesting allowed, paths confined to the
-territory), a repo-wide dispatching pre-commit hook, git-located Claude hook commands,
-and per-root inbox/backlog/gates.</p>
-<p>Done when the spec's test matrix passes (single subfolder, siblings, nested) including
-real commits through the dispatcher, and a repo-top doc root behaves exactly as before.
-Until then, the skill should refuse to set up a doc root outside the repo top rather
-than fail silently — consider shipping that guard first.</p>
 
 </main>
 </div>

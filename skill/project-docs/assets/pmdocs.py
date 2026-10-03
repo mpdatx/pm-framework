@@ -3,7 +3,7 @@
 # dependencies = ["markdown-it-py>=3.0", "pyyaml>=6.0"]
 # ///
 # SPDX-License-Identifier: MIT — Copyright (c) 2026 Matthew Daniels — https://github.com/mpdatx/pm-framework
-"""pmdocs 0.3.3 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
+"""pmdocs 0.4.0 — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
 
 Keeps a project's docs and work status current: renders docs/ to docs/site/, generates
 docs/roadmap.md, validates frontmatter/backlog/links, detects drift and staleness, and
@@ -25,7 +25,7 @@ import tempfile
 import time
 import tomllib
 import traceback
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
 from string import Template
@@ -34,7 +34,7 @@ from urllib.parse import quote, unquote
 import yaml
 from markdown_it import MarkdownIt
 
-VERSION = "0.3.3"
+VERSION = "0.4.0"
 
 
 class PmdocsError(Exception):
@@ -104,6 +104,20 @@ def find_root(start: Path) -> Path:
     raise PmdocsError(f"no {CONFIG_REL} found in {start} or any parent")
 
 
+def own_root():
+    """The doc root this copy is vendored into (`<root>/scripts/pmdocs.py`), or None.
+    Hooks run from the repo top (git) or wherever Claude was launched, so a vendored copy
+    must not depend on the current directory to know which project it serves."""
+    here = Path(__file__).resolve()
+    if here.parent.name == "scripts" and (here.parent.parent / CONFIG_REL).is_file():
+        return here.parent.parent
+    return None
+
+
+def default_root() -> Path:
+    return own_root() or find_root(Path.cwd())
+
+
 @dataclass
 class MapEntry:
     paths: list
@@ -127,6 +141,9 @@ class Config:
     # Where links that leave docs/ are resolved. Differs from root only when building
     # from an export of the index (the pre-commit hook).
     outside_root: Path
+    # Doc roots nested inside this one, as doc-root-relative directories. Their trees are
+    # outside this doc root's territory: its pages, coverage and staleness skip them.
+    nested: list = field(default_factory=list)
 
 
 @dataclass
@@ -185,7 +202,30 @@ def load_config(root: Path, outside_root: Path | None = None) -> Config:
         nav=[norm(p) for p in site.get("nav", [])],
         extra=with_readme(parse_extra(site.get("extra", [])), site.get("readme", True)),
         outside_root=Path(outside_root) if outside_root else root,
+        # an index export (outside_root given) is not a work tree; the hook copies `nested`
+        # over from the real doc root's config
+        nested=[] if outside_root else nested_doc_roots(root),
     )
+
+
+def nested_doc_roots(root: Path) -> list:
+    """Doc roots inside this one (tracked or not yet added), doc-root-relative, sorted."""
+    if not in_work_tree(root):
+        return []
+    files = zsplit(git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard"))
+    suffix = "/" + CONFIG_REL
+    return sorted({f[:-len(suffix)] for f in files if f.endswith(suffix)})
+
+
+def in_territory(rel: str, nested) -> bool:
+    """True unless rel lies inside a nested doc root."""
+    return not any(rel == n or rel.startswith(n + "/") for n in nested)
+
+
+def leaves_root(path: str) -> bool:
+    """A configured path that points outside the doc root (`..`, `../…` or absolute)."""
+    p = norm(path)
+    return p == ".." or p.startswith("../") or p.startswith("/") or bool(re.match(r"[A-Za-z]:", p))
 
 
 FM_RE = re.compile(r"\A---\n(.*?)\n?---[ \t]*(?:\n|\Z)", re.S)  # `\n?`: an empty block is still a block
@@ -381,8 +421,8 @@ def doc_files(cfg: Config) -> list:
     out = []
     for p in sorted(docs.rglob("*.md"), key=lambda p: p.as_posix()):
         rel = p.relative_to(cfg.root).as_posix()
-        if rel.startswith("docs/site/") or any_match(rel, cfg.exclude):
-            continue
+        if rel.startswith("docs/site/") or any_match(rel, cfg.exclude) or not in_territory(rel, cfg.nested):
+            continue  # a doc root nested under docs/ owns its own pages
         out.append(rel)
     return out
 
@@ -411,7 +451,7 @@ def extra_files(cfg: Config) -> list:
             continue
         for p in base.rglob("*.md"):
             rel = p.relative_to(cfg.root).as_posix()
-            if glob_match(rel, pattern) and not rel.startswith("docs/"):
+            if glob_match(rel, pattern) and not rel.startswith("docs/") and in_territory(rel, cfg.nested):
                 found.add(rel)
     return sorted(found)
 
@@ -562,12 +602,28 @@ def validate(model: Model) -> list:
         if m and id_key(m.group(1)) not in dkeys:
             err(where, f"{d.id} is superseded by {m.group(1)}, which does not exist")
 
+    # Every configured path stays inside the doc root: shared code is documented by the
+    # doc root that contains it (B09).
+    for entry in cfg.maps:
+        for p in entry.paths:
+            if leaves_root(p):
+                err(CONFIG_REL, f"[[map]] path {p} leaves the doc root")
+    for p in cfg.coverage_include + cfg.coverage_exclude:
+        if leaves_root(p):
+            err(CONFIG_REL, f"[coverage] path {p} leaves the doc root")
+    for g in cfg.extra:
+        for p in g.paths:
+            if leaves_root(p):
+                err(CONFIG_REL, f"[[site.extra]] path {p} leaves the doc root")
     for entry in cfg.maps:
         for pg in entry.pages:
+            if leaves_root(pg):
+                err(CONFIG_REL, f"[[map]] page {pg} leaves the doc root")
+                continue
             # validate() also runs against the hook's export of docs/ only, so a page
             # outside docs/ (a LICENSE, a provenance table) is found via outside_root.
             if not ((cfg.root / pg).is_file() or (cfg.outside_root / pg).is_file()):
-                err(CONFIG_REL, f"[[map]] page {pg} does not exist (paths are relative to the repository root)")
+                err(CONFIG_REL, f"[[map]] page {pg} does not exist (paths are relative to the doc root)")
 
     if cfg.nav:
         err(CONFIG_REL, "[site] nav was removed in pmdocs 0.2.0: the sidebar order is fixed. Attach "
@@ -695,34 +751,22 @@ def in_work_tree(root: Path) -> bool:
     return git(root, "rev-parse", "--is-inside-work-tree", check=False).strip() == "true"
 
 
-def doc_root_problem(root: Path):
-    """Why this doc root can't work yet, or None. Until doc roots in subfolders are
-    supported, a doc root must be the repository top: below it, git reports paths the
-    doc-map can't match and git's hooks path can't reach the vendored hook — everything
-    would fail silently, so say so instead."""
-    top = git(root, "rev-parse", "--show-toplevel", check=False).strip()
-    if not top:
-        return None
-    try:
-        if os.path.samefile(top, root):
-            return None
-    except OSError:
-        return None
-    return (f"this doc root ({Path(root).resolve()}) must be the repository top ({Path(top).resolve()}): "
-            f"pmdocs {VERSION} does not support a doc root in a subfolder yet — staleness checks "
-            "and the hooks would silently not work there")
+def changed_files(root: Path, staged: bool, nested=()) -> set:
+    """Changed files in this doc root's territory, as doc-root-relative paths.
 
-
-def changed_files(root: Path, staged: bool) -> set:
-    """staged: index vs HEAD. Otherwise: working tree vs HEAD plus untracked files."""
+    staged: index vs HEAD. Otherwise: working tree vs HEAD plus untracked files.
+    `diff --relative` makes paths doc-root-relative and drops changes outside the doc root
+    (plain `diff` reports repo-top paths, which never match a subfolder's doc-map);
+    `ls-files` is cwd-relative already. Files in nested doc roots are dropped too."""
     if staged:
-        return set(zsplit(git(root, "diff", "--cached", "--name-only", "-z", "--no-renames")))
-    files = set(zsplit(git(root, "ls-files", "--others", "--exclude-standard", "-z")))
-    if has_head(root):
-        files |= set(zsplit(git(root, "diff", "HEAD", "--name-only", "-z", "--no-renames")))
+        files = set(zsplit(git(root, "diff", "--cached", "--name-only", "-z", "--no-renames", "--relative")))
     else:
-        files |= set(zsplit(git(root, "ls-files", "-z")))
-    return files
+        files = set(zsplit(git(root, "ls-files", "--others", "--exclude-standard", "-z")))
+        if has_head(root):
+            files |= set(zsplit(git(root, "diff", "HEAD", "--name-only", "-z", "--no-renames", "--relative")))
+        else:
+            files |= set(zsplit(git(root, "ls-files", "-z")))
+    return {f for f in files if in_territory(f, nested)}
 
 
 def pages_for(cfg: Config, path: str) -> list:
@@ -752,7 +796,7 @@ def coverage(cfg: Config) -> list:
         return []
     out = []
     for f in sorted(zsplit(git(cfg.root, "ls-files", "-z"))):
-        if f in VENDORED:
+        if f in VENDORED or not in_territory(f, cfg.nested):
             continue
         if (any_match(f, cfg.coverage_include) and not any_match(f, cfg.coverage_exclude)
                 and not any(any_match(f, e.paths) for e in cfg.maps)):
@@ -928,10 +972,8 @@ def doc_findings(model: Model) -> list:
 def repo_findings(cfg: Config, model: Model, staged: bool, now: float) -> list:
     if not in_work_tree(cfg.root):
         return [Finding("INFO", ".", "not a git work tree; staleness and coverage skipped")]
-    problem = doc_root_problem(cfg.root)
-    if problem:
-        return [Finding("ERROR", CONFIG_REL, problem)]
-    return staleness(cfg, changed_files(cfg.root, staged)) + coverage(cfg) + drift_stale_progress(model, now)
+    changed = changed_files(cfg.root, staged, cfg.nested)
+    return staleness(cfg, changed) + coverage(cfg) + drift_stale_progress(model, now)
 
 
 def inbox_findings(model: Model) -> list:
@@ -950,7 +992,7 @@ def report(findings, stream=None) -> None:
 
 
 def cmd_check(args) -> int:
-    cfg = load_config(find_root(Path.cwd()))
+    cfg = load_config(default_root())
     findings = []
     model = load_model(cfg)
     if args.fix:
@@ -1297,7 +1339,7 @@ def site_outputs(model: Model) -> dict:
     for p in sorted(docs.rglob("*"), key=lambda p: p.as_posix()):
         rel = p.relative_to(model.cfg.root).as_posix()
         if (p.is_file() and p.suffix.lower() in ASSET_EXT and not rel.startswith(SITE_DIR + "/")
-                and not any_match(rel, model.cfg.exclude)):
+                and not any_match(rel, model.cfg.exclude) and in_territory(rel, model.cfg.nested)):
             out[SITE_DIR + rel[len("docs"):]] = p.read_bytes()
     return out
 
@@ -1340,7 +1382,7 @@ def build(cfg: Config, check: bool = False) -> list:
 
 
 def cmd_build(args) -> int:
-    cfg = load_config(find_root(Path.cwd()))
+    cfg = load_config(default_root())
     changed = build(cfg, check=args.check)
     if args.check:
         for rel in changed:
@@ -1365,16 +1407,25 @@ def _operation_in_progress(root: Path) -> bool:
                ("MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-merge", "rebase-apply"))
 
 
-def export_index(root: Path, dest: Path, extra: list = ()) -> None:
+def repo_prefix(root: Path) -> str:
+    """The doc root's path from the repository top, with a trailing slash ('' at the top)."""
+    return git(root, "rev-parse", "--show-prefix").strip()
+
+
+def export_index(root: Path, dest: Path, extra: list = (), nested=()) -> Path:
     """Write what the build reads — staged docs/ (minus the site), TODO.md and any
-    [site] extra files — into dest, exactly as they will be committed."""
+    [site] extra files, within this doc root's territory — exactly as they will be
+    committed. Returns where the doc root landed: `checkout-index` writes every file at
+    its repo-top path, so a doc root at apps/foo/ is exported to dest/apps/foo/."""
     files = [f for f in zsplit(git(root, "ls-files", "-z", "--", "docs", INBOX_REL))
              if not f.startswith(SITE_DIR + "/")]
     if extra:
         files += [f for f in zsplit(git(root, "ls-files", "-z"))
                   if not f.startswith("docs/") and any_match(f, extra)]
+    files = [f for f in files if in_territory(f, nested)]
     if files:
         git(root, "checkout-index", f"--prefix={dest.as_posix()}/", "-z", "--stdin", input="\0".join(files))
+    return dest / repo_prefix(root)
 
 
 def _mirror(src: Path, dest: Path) -> list:
@@ -1403,20 +1454,20 @@ def hook_pre_commit(root: Path, today: str | None = None) -> int:
         return 0
     cfg = load_config(root)
     # Never stage a file the user hasn't fully staged: skip fixes on dirty or untracked files.
-    blocked = frozenset(zsplit(git(root, "diff", "--name-only", "-z"))) | frozenset(
+    blocked = frozenset(zsplit(git(root, "diff", "--name-only", "-z", "--relative"))) | frozenset(
         zsplit(git(root, "ls-files", "--others", "--exclude-standard", "-z")))
     findings, touched = apply_fixes(cfg, load_model(cfg), today or date.today().isoformat(), blocked)
     if touched:
         git(root, "add", "--", *sorted(set(touched)))
-    with tempfile.TemporaryDirectory(prefix="pmdocs-") as tmp:
-        tmp = Path(tmp)
-        export_index(root, tmp, extra_patterns(cfg))
+    with tempfile.TemporaryDirectory(prefix="pmdocs-") as tmpdir:
+        tmp = export_index(root, Path(tmpdir), extra_patterns(cfg), cfg.nested)
         if not (tmp / CONFIG_REL).is_file():
             print(f"pmdocs: {CONFIG_REL} is not in the index yet; skipping", file=sys.stderr)
             return 0
         icfg = load_config(tmp, outside_root=root)
+        icfg.nested = cfg.nested
         model = load_model(icfg)
-        findings += (doc_findings(model) + staleness(cfg, changed_files(root, staged=True))
+        findings += (doc_findings(model) + staleness(cfg, changed_files(root, True, cfg.nested))
                      + coverage(cfg) + inbox_findings(model))
         report(findings, sys.stderr)
         if any(f.level == "ERROR" for f in findings):
@@ -1436,7 +1487,7 @@ def hook_pre_commit(root: Path, today: str | None = None) -> int:
 def cmd_hook(args) -> int:
     if args.event == "pre-commit":
         try:
-            return hook_pre_commit(find_root(Path.cwd()))
+            return hook_pre_commit(default_root())
         except Exception:
             traceback.print_exc()
             print("pmdocs: hook failed; commit allowed", file=sys.stderr)
@@ -1455,13 +1506,14 @@ def hook_post_edit(stdin_text: str, cwd: Path) -> str:
         if not file_path:
             return ""
         base = Path(data.get("cwd") or cwd)
-        root = find_root(base)
+        root = own_root() or find_root(base)
         p = Path(file_path)
         p = p if p.is_absolute() else base / p
         rel = norm(os.path.relpath(p.resolve(), root.resolve()))
-        if rel.startswith("../"):
-            return ""
-        pages = pages_for(load_config(root), rel)
+        cfg = load_config(root)
+        if rel.startswith("../") or not in_territory(rel, cfg.nested):
+            return ""  # another doc root's file: its own hook entry speaks for it
+        pages = pages_for(cfg, rel)
         if not pages:
             return ""
         msg = (f"{rel} is documented in {', '.join(pages)}. "
@@ -1475,10 +1527,11 @@ def hook_stop(stdin_text: str, cwd: Path) -> str:
     """Claude Code Stop: list stale pages and untriaged inbox items. Never blocks."""
     try:
         data = json.loads(stdin_text) if stdin_text.strip() else {}
-        root = find_root(Path(data.get("cwd") or cwd))
+        root = own_root() or find_root(Path(data.get("cwd") or cwd))
         cfg = load_config(root)
+        label = _project_label(root, cfg)
         stale = [f"{f.where} -> {', '.join(pages_for(cfg, f.where))}"
-                 for f in staleness(cfg, changed_files(root, staged=False))]
+                 for f in staleness(cfg, changed_files(root, False, cfg.nested))]
         stale_text = "docs may be stale: " + "; ".join(dict.fromkeys(stale)) if stale else ""
         n = inbox_count(root)
         waiting = len(waiting_gates(root))
@@ -1490,11 +1543,19 @@ def hook_stop(stdin_text: str, cwd: Path) -> str:
         # systemMessage is shown to the user. additionalContext re-invokes the agent, so it
         # carries only what the agent should act on (stale pages), and never on a turn that a
         # Stop hook already caused (stop_hook_active) — otherwise a persisting condition loops.
-        out = {"systemMessage": "pmdocs: " + " | ".join(parts)}
+        out = {"systemMessage": f"pmdocs{label}: " + " | ".join(parts)}
         if stale_text and not data.get("stop_hook_active"):
-            out["hookSpecificOutput"] = {"hookEventName": "Stop", "additionalContext": "pmdocs: " + stale_text}
+            out["hookSpecificOutput"] = {"hookEventName": "Stop", "additionalContext": f"pmdocs{label}: " + stale_text}
         return json.dumps(out)
     except Exception:
+        return ""
+
+
+def _project_label(root: Path, cfg: Config) -> str:
+    """' [title]' when the repository has several doc roots, so their notes can be told apart."""
+    try:
+        return f" [{cfg.title}]" if len(repo_doc_roots(root)) > 1 else ""
+    except PmdocsError:
         return ""
 
 
@@ -1513,7 +1574,7 @@ def hook_session_start(stdin_text: str, cwd: Path) -> str:
     backlog items in progress or blocked — so a new session starts current (D10)."""
     try:
         data = json.loads(stdin_text) if stdin_text.strip() else {}
-        root = find_root(Path(data.get("cwd") or cwd))
+        root = own_root() or find_root(Path(data.get("cwd") or cwd))
         lines = []
         gates = waiting_gates(root)
         if gates:
@@ -1535,7 +1596,8 @@ def hook_session_start(stdin_text: str, cwd: Path) -> str:
         if gates:
             lines.append("When the user gives a verdict on a gate, record their words in that gate at "
                          "once (a dated `- YYYY-MM-DD — \"…\"` line) and reference the gate by ID elsewhere.")
-        msg = "pmdocs — project status at session start:\n" + "\n".join(lines)
+        label = _project_label(root, load_config(root))
+        msg = f"pmdocs{label} — project status at session start:\n" + "\n".join(lines)
         return json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": msg}})
     except Exception:
         return ""
@@ -1544,19 +1606,47 @@ def hook_session_start(stdin_text: str, cwd: Path) -> str:
 # === install-hooks ===
 
 HOOKS_PATH = "scripts/hooks"
-SETTINGS_REL = ".claude/settings.json"
+SETTINGS_REL = ".claude/settings.json"   # always the repository top's
+# Claude Code event -> (matcher, `pmdocs hook` subcommand)
 CLAUDE_HOOKS = {
-    "PostToolUse": {"matcher": "Edit|Write|MultiEdit",
-                    "command": 'uv run --quiet "$CLAUDE_PROJECT_DIR/scripts/pmdocs.py" hook post-edit'},
-    "Stop": {"matcher": None,
-             "command": 'uv run --quiet "$CLAUDE_PROJECT_DIR/scripts/pmdocs.py" hook stop'},
-    "SessionStart": {"matcher": None,
-                     "command": 'uv run --quiet "$CLAUDE_PROJECT_DIR/scripts/pmdocs.py" hook session-start'},
+    "PostToolUse": ("Edit|Write|MultiEdit", "post-edit"),
+    "Stop": (None, "stop"),
+    "SessionStart": (None, "session-start"),
 }
+OLD_TOOL_REF = '"$CLAUDE_PROJECT_DIR/scripts/pmdocs.py"'  # the command form before 0.4.0
+DISPATCHER_MARKER = "this hook serves every doc root"     # text in the vendored pre-commit
 
 
-def _is_ours(command: str) -> bool:
-    return "scripts/pmdocs.py" in command and " hook " in command
+def tool_ref(prefix: str) -> str:
+    """How a Claude Code hook finds a doc root's tool: through git, so it works wherever
+    Claude was launched in the repository (B09)."""
+    return f'"$(git rev-parse --show-toplevel)/{prefix}scripts/pmdocs.py"'
+
+
+def claude_command(prefix: str, sub: str) -> str:
+    return f"uv run --quiet {tool_ref(prefix)} hook {sub}"
+
+
+def _is_ours(command: str, prefix=None) -> bool:
+    """A pmdocs hook entry — for this doc root's prefix if given, for any doc root if not."""
+    if " hook " not in command:
+        return False
+    if prefix is None:
+        return "scripts/pmdocs.py" in command
+    return tool_ref(prefix) in command or (prefix == "" and OLD_TOOL_REF in command)
+
+
+def repo_top(root: Path) -> Path:
+    return Path(git(root, "rev-parse", "--show-toplevel").strip())
+
+
+def repo_doc_roots(path: Path) -> list:
+    """Every doc root in the repository, as repo-top-relative directories ('.' for the top)."""
+    top = repo_top(path)
+    files = zsplit(git(top, "ls-files", "-z", "--cached", "--others", "--exclude-standard"))
+    roots = {"." if f == CONFIG_REL else f[:-len("/" + CONFIG_REL)]
+             for f in files if f == CONFIG_REL or f.endswith("/" + CONFIG_REL)}
+    return sorted(roots)
 
 
 def _load_settings(root: Path) -> dict:
@@ -1587,32 +1677,13 @@ def settings_ignored(root: Path) -> bool:
     return r.returncode == 0
 
 
-def merge_claude_settings(root: Path) -> bool:
-    data = _load_settings(root)
-    hooks = data.setdefault("hooks", {})
-    changed = False
-    for event, spec in CLAUDE_HOOKS.items():
-        groups = hooks.setdefault(event, [])
-        if any(_is_ours(h.get("command", "")) for g in groups for h in g.get("hooks", [])):
-            continue
-        group = {"hooks": [{"type": "command", "command": spec["command"]}]}
-        if spec["matcher"]:
-            group = {"matcher": spec["matcher"], **group}
-        groups.append(group)
-        changed = True
-    if changed:
-        write_text(root / SETTINGS_REL, json.dumps(data, indent=2) + "\n")
-    return changed
-
-
-def remove_claude_settings(root: Path) -> bool:
-    data = _load_settings(root)
-    hooks = data.get("hooks", {})
+def _drop(hooks: dict, keep) -> bool:
+    """Remove hook entries for which keep(command) is false; drop emptied groups/events."""
     changed = False
     for event in list(hooks):
         kept_groups = []
         for g in hooks[event]:
-            kept = [h for h in g.get("hooks", []) if not _is_ours(h.get("command", ""))]
+            kept = [h for h in g.get("hooks", []) if keep(h.get("command", ""))]
             changed |= len(kept) != len(g.get("hooks", []))
             if kept:
                 kept_groups.append({**g, "hooks": kept})
@@ -1620,27 +1691,90 @@ def remove_claude_settings(root: Path) -> bool:
             hooks[event] = kept_groups
         else:
             del hooks[event]
-    if "hooks" in data and not hooks:
-        del data["hooks"]
-    if changed:
-        write_text(root / SETTINGS_REL, json.dumps(data, indent=2) + "\n")
     return changed
 
 
+def merge_claude_settings(root: Path) -> bool:
+    """Register this doc root's Claude Code hooks in the repository top's settings,
+    replacing any older form of them (each doc root has its own set)."""
+    top, prefix = repo_top(root), repo_prefix(root)
+    data = _load_settings(top)
+    hooks = data.setdefault("hooks", {})
+    wanted = {claude_command(prefix, sub) for _, sub in CLAUDE_HOOKS.values()}
+    changed = _drop(hooks, lambda c: not _is_ours(c, prefix) or c in wanted)
+    for event, (matcher, sub) in CLAUDE_HOOKS.items():
+        command = claude_command(prefix, sub)
+        groups = hooks.setdefault(event, [])
+        if any(h.get("command") == command for g in groups for h in g.get("hooks", [])):
+            continue
+        group = {"hooks": [{"type": "command", "command": command}]}
+        if matcher:
+            group = {"matcher": matcher, **group}
+        groups.append(group)
+        changed = True
+    if changed:
+        write_text(top / SETTINGS_REL, json.dumps(data, indent=2) + "\n")
+    return changed
+
+
+def remove_claude_settings(root: Path) -> bool:
+    top, prefix = repo_top(root), repo_prefix(root)
+    data = _load_settings(top)
+    hooks = data.get("hooks", {})
+    changed = _drop(hooks, lambda c: not _is_ours(c, prefix))
+    if "hooks" in data and not hooks:
+        del data["hooks"]
+    if changed:
+        write_text(top / SETTINGS_REL, json.dumps(data, indent=2) + "\n")
+    return changed
+
+
+def _is_dispatcher(path: Path) -> bool:
+    try:
+        return DISPATCHER_MARKER in path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+
+
+def _is_old_pmdocs_hook(path: Path) -> bool:
+    """A vendored pmdocs hook from before the 0.4 dispatcher."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return "vendored from pm-framework" in text and DISPATCHER_MARKER not in text
+
+
 def install_hooks(root: Path) -> list:
-    problem = doc_root_problem(root)
-    if problem:
-        raise PmdocsError(problem)
     msgs = []
     hook = root / HOOKS_PATH / "pre-commit"
     if not hook.is_file():
         raise PmdocsError(f"{HOOKS_PATH}/pre-commit is missing; vendor it from the project-docs skill first")
-    current = git(root, "config", "--get", "core.hooksPath", check=False).strip()
-    if current and norm(current).rstrip("/") != HOOKS_PATH:
-        raise PmdocsError(
-            f"core.hooksPath is already {current!r}. Either call `uv run scripts/pmdocs.py hook pre-commit` "
-            f"from that pre-commit hook (exit 10 means block the commit), or move those hooks into "
-            f"{HOOKS_PATH}/, unset core.hooksPath and re-run.")
+    top = repo_top(root)
+    # git resolves a relative core.hooksPath from the repository top, so point at this
+    # doc root's hooks by their repo-top path (B09).
+    target = repo_prefix(root) + HOOKS_PATH
+    current = norm(git(root, "config", "--get", "core.hooksPath", check=False).strip()).rstrip("/")
+    if not _is_dispatcher(hook):
+        msgs.append(f"WARNING: {HOOKS_PATH}/pre-commit predates the pmdocs 0.4 dispatcher; re-vendor it "
+                    "from the project-docs skill (the update workflow)")
+    if current and current != target:
+        current_hook = top / current / "pre-commit"
+        if _is_dispatcher(current_hook):
+            msgs.append(f"core.hooksPath stays {current}: that pmdocs hook dispatches to every doc root, "
+                        "including this one")
+        elif _is_old_pmdocs_hook(current_hook):
+            owner = current[:-len(HOOKS_PATH)].rstrip("/") or "."
+            raise PmdocsError(
+                f"core.hooksPath points at {current}, a pmdocs hook from before 0.4 that checks only its "
+                f"own doc root. Update the doc root at {owner} to pmdocs 0.4 or later first (the skill's "
+                "update workflow), then re-run install-hooks here.")
+        else:
+            raise PmdocsError(
+                f"core.hooksPath is already {current!r}. Either call this doc root's "
+                f"`uv run {target[:-len(HOOKS_PATH)]}scripts/pmdocs.py hook pre-commit` from that pre-commit hook "
+                f"(exit 10 means block the commit), or move those hooks into {target}/, unset "
+                "core.hooksPath and re-run.")
     if not current:
         hooks_dir = Path(git(root, "rev-parse", "--git-path", "hooks").strip())
         hooks_dir = hooks_dir if hooks_dir.is_absolute() else root / hooks_dir
@@ -1649,48 +1783,56 @@ def install_hooks(root: Path) -> list:
         if active:
             raise PmdocsError(
                 f"{hooks_dir} has active hooks ({', '.join(active)}) that core.hooksPath would disable. "
-                f"Move them into {HOOKS_PATH}/ (chaining pmdocs from pre-commit), then re-run.")
-        git(root, "config", "core.hooksPath", HOOKS_PATH)
-        msgs.append(f"core.hooksPath -> {HOOKS_PATH}")
+                f"Move them into {target}/ (chaining pmdocs from pre-commit), then re-run.")
+        git(root, "config", "core.hooksPath", target)
+        msgs.append(f"core.hooksPath -> {target}")
     if os.name != "nt":
         hook.chmod(hook.stat().st_mode | 0o111)
     git(root, "add", "--", f"{HOOKS_PATH}/pre-commit")
     git(root, "update-index", "--chmod=+x", "--", f"{HOOKS_PATH}/pre-commit")
     msgs.append(f"{HOOKS_PATH}/pre-commit staged as executable")
     if merge_claude_settings(root):
-        msgs.append(f"Claude Code hooks added to {SETTINGS_REL}")
-    if settings_ignored(root):
+        msgs.append(f"Claude Code hooks added to {SETTINGS_REL} (repository top)")
+    if settings_ignored(top):
         msgs.append(IGNORED_SETTINGS_WARNING)
     return msgs
 
 
 def hooks_status(root: Path) -> list:
-    current = git(root, "config", "--get", "core.hooksPath", check=False).strip()
+    top, prefix = repo_top(root), repo_prefix(root)
+    current = norm(git(root, "config", "--get", "core.hooksPath", check=False).strip()).rstrip("/")
     staged = git(root, "ls-files", "-s", "--", f"{HOOKS_PATH}/pre-commit").split(" ")[0]
     hook_state = {"100755": "executable in git", "100644": "NOT executable in git", "": "not in git"}.get(staged, staged)
-    ours = any(_is_ours(h.get("command", "")) for groups in _load_settings(root).get("hooks", {}).values()
+    ours = any(_is_ours(h.get("command", ""), prefix)
+               for groups in _load_settings(top).get("hooks", {}).values()
                for g in groups for h in g.get("hooks", []))
     lines = [f"core.hooksPath: {current or '(unset)'}",
              f"{HOOKS_PATH}/pre-commit: {hook_state}",
-             f"Claude Code hooks: {'installed' if ours else 'missing'}"]
-    if settings_ignored(root):
+             f"Claude Code hooks: {'installed' if ours else 'missing'}",
+             "pre-commit covers doc roots: " + ", ".join(repo_doc_roots(root))]
+    if current and not (top / current / "pre-commit").is_file():
+        lines.append(f"WARNING: core.hooksPath {current} has no pre-commit hook, so no doc root is checked")
+    if settings_ignored(top):
         lines.append(IGNORED_SETTINGS_WARNING)
     return lines
 
 
 def uninstall_hooks(root: Path) -> list:
     msgs = []
-    current = git(root, "config", "--get", "core.hooksPath", check=False).strip()
-    if norm(current).rstrip("/") == HOOKS_PATH:
-        git(root, "config", "--unset", "core.hooksPath")
-        msgs.append("core.hooksPath unset")
+    current = norm(git(root, "config", "--get", "core.hooksPath", check=False).strip()).rstrip("/")
+    if current == repo_prefix(root) + HOOKS_PATH:
+        if len(repo_doc_roots(root)) > 1:
+            msgs.append(f"core.hooksPath left at {current}: other doc roots in this repository use it")
+        else:
+            git(root, "config", "--unset", "core.hooksPath")
+            msgs.append("core.hooksPath unset")
     if remove_claude_settings(root):
         msgs.append(f"Claude Code hooks removed from {SETTINGS_REL}")
     return msgs
 
 
 def cmd_install_hooks(args) -> int:
-    root = find_root(Path.cwd())
+    root = default_root()
     if args.status:
         lines = hooks_status(root)
     elif args.uninstall:

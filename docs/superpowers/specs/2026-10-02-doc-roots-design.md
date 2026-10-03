@@ -1,6 +1,6 @@
 ---
 title: Doc roots — project-docs in subfolders and monorepos
-status: approved
+status: shipped
 created: 2026-10-02
 backlog: [B09]
 ---

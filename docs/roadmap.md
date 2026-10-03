@@ -16,20 +16,18 @@ Nothing is waiting on you.
 
 | Spec | Status | Plans | Backlog |
 |---|---|---|---|
-| [Doc roots — project-docs in subfolders and monorepos](superpowers/specs/2026-10-02-doc-roots-design.md) | approved | — | B09 |
+| [Doc roots — project-docs in subfolders and monorepos](superpowers/specs/2026-10-02-doc-roots-design.md) | shipped | — | B09 |
 | [project-docs — a portable documentation and work-status convention](superpowers/specs/2026-09-30-project-docs-design.md) | shipped | — | B01 |
 
 ## Backlog
 
-### Open
+Nothing open.
 
-- **B09** [Doc roots: project-docs in subfolders and monorepos](backlog.md#b09-doc-roots-project-docs-in-subfolders-and-monorepos) — [spec](superpowers/specs/2026-10-02-doc-roots-design.md)
-
-Closed items: 5 in [the archive](backlog-archive.md).
+Closed items: 6 in [the archive](backlog-archive.md).
 
 ## Inbox
 
-Empty.
+4 item(s) in `TODO.md` awaiting triage.
 
 ## Drift
 

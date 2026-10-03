@@ -58,8 +58,24 @@ release". Bump `VERSION` in `tool/pmdocs.py` once per release, not per change.
 | install-hooks | `core.hooksPath` and `.claude/settings.json` merge/removal |
 | cli | argparse; `cmd_*` dispatch; errors exit 2 |
 
+### Doc roots
+
+The tool serves one **doc root**, the folder holding `docs/pmdocs.toml`, which may be
+the repository top or a subfolder (B09, D11). A vendored copy finds its doc root from
+its own location (`own_root`: `<root>/scripts/pmdocs.py`), so it doesn't matter where
+git or Claude was started. All git output is made doc-root-relative: `diff --relative`
+for changed files, while `ls-files` already is. Files inside nested doc roots
+(`Config.nested`, discovered from tracked and untracked `*/docs/pmdocs.toml`) are
+dropped by `in_territory`. `checkout-index` writes at repo-top paths, so the index
+export of a doc root at `apps/foo/` lives at `<tmp>/apps/foo/` (`export_index` returns
+it). The git hook is a dispatcher over every doc root a commit touches. Claude Code hook
+entries, one set per doc root in the repo top's settings, locate their tool via
+`git rev-parse --show-toplevel`.
+
 ### The pre-commit flow
 
+0. The sh dispatcher (`scripts/hooks/pre-commit`) runs, from each doc root a commit
+   touches, that root's `scripts/pmdocs.py hook pre-commit`. It blocks if any returns 10.
 1. Skip on `PMDOCS_SKIP=1` or mid-merge/rebase.
 2. Apply fixes to files the user has fully staged; stage the fixed files.
 3. Export the index's `docs/` and `TODO.md` to a temp dir; validate there.

@@ -40,6 +40,9 @@ mechanically, so drift is caught while the agent is still editing and again at c
 - **Enforcement**: pre-commit blocks only on doc errors and builds the site from the
   index; Claude Code hooks name the pages covering each edited file, list stale pages at
   the end of a turn, and brief each new session on open gates and in-flight work.
+- **Monorepos**: a project can live in a subfolder, and one repository can hold several
+  (siblings or nested): each folder with `docs/pmdocs.toml` is its own doc root, with
+  its own docs, backlog, gates and site, and one git hook checks them all.
 - **Cross-platform**: Linux, macOS and Windows; POSIX `sh` hook; Python via `uv`.
 
 ## Non-goals

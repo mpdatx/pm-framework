@@ -110,6 +110,9 @@ drift and staleness, apply mechanical fixes, install hooks.</li>
 <li><strong>Enforcement</strong>: pre-commit blocks only on doc errors and builds the site from the
 index; Claude Code hooks name the pages covering each edited file, list stale pages at
 the end of a turn, and brief each new session on open gates and in-flight work.</li>
+<li><strong>Monorepos</strong>: a project can live in a subfolder, and one repository can hold several
+(siblings or nested): each folder with <code>docs/pmdocs.toml</code> is its own doc root, with
+its own docs, backlog, gates and site, and one git hook checks them all.</li>
 <li><strong>Cross-platform</strong>: Linux, macOS and Windows; POSIX <code>sh</code> hook; Python via <code>uv</code>.</li>
 </ul>
 <h2 id="non-goals">Non-goals</h2>

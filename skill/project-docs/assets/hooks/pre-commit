@@ -1,19 +1,45 @@
 #!/bin/sh
 # pmdocs pre-commit hook — vendored from pm-framework; do not edit, re-run the project-docs skill to update.
 # SPDX-License-Identifier: MIT — Copyright (c) 2026 Matthew Daniels — https://github.com/mpdatx/pm-framework
-# Blocks the commit only when pmdocs reports a documentation error (exit 10).
-# Anything else — uv missing, a tool crash — lets the commit through with a message.
+#
+# A dispatcher: git has one hooks path per repository, so this hook serves every doc root
+# in it (each folder with docs/pmdocs.toml — the repo top, a subfolder, or both). For each
+# doc root with staged changes it runs that project's own scripts/pmdocs.py. It blocks the
+# commit only when a project reports a documentation error (exit 10); anything else —
+# uv missing, a tool crash — lets the commit through with a message.
 [ "$PMDOCS_SKIP" = "1" ] && exit 0
 if ! command -v uv >/dev/null 2>&1; then
   echo "pmdocs: uv not found; docs not checked (install uv to enable)" >&2
   exit 0
 fi
-uv run --quiet scripts/pmdocs.py hook pre-commit
-status=$?
-if [ "$status" -eq 10 ]; then
-  exit 1
-fi
-if [ "$status" -ne 0 ]; then
-  echo "pmdocs: tool failed (exit $status); commit allowed" >&2
-fi
-exit 0
+top=$(git rev-parse --show-toplevel) || exit 0
+cd "$top" || exit 0
+# core.quotePath=false: by default git quotes and octal-escapes non-ASCII paths
+# ("apps/caf\303\251/…"), which would silently skip that doc root. (A path containing
+# a double quote or backslash is still quoted; don't name doc roots that way.)
+git -c core.quotePath=false ls-files --cached -- '*docs/pmdocs.toml' | {
+  rc=0
+  while IFS= read -r cfg; do
+    case "$cfg" in
+      docs/pmdocs.toml) root=. ;;
+      */docs/pmdocs.toml) root=${cfg%/docs/pmdocs.toml} ;;
+      *) continue ;;
+    esac
+    # only doc roots this commit touches
+    if git diff --cached --quiet -- "$root"; then
+      continue
+    fi
+    if [ ! -f "$root/scripts/pmdocs.py" ]; then
+      echo "pmdocs: $root has docs/pmdocs.toml but no scripts/pmdocs.py; not checked" >&2
+      continue
+    fi
+    (cd "$root" && uv run --quiet scripts/pmdocs.py hook pre-commit </dev/null)
+    status=$?
+    if [ "$status" -eq 10 ]; then
+      rc=1
+    elif [ "$status" -ne 0 ]; then
+      echo "pmdocs ($root): tool failed (exit $status); commit allowed" >&2
+    fi
+  done
+  exit $rc
+}

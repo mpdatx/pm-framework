@@ -76,7 +76,7 @@ img,svg{max-width:100%}
 <main>
 <h1>Decisions</h1>
 <p class="summary">Why project-docs is the way it is. Records are never rewritten; superseded ones are marked.</p>
-<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#d01-vendor-the-tool-into-each-project">D01. Vendor the tool into each project</a></li><li class="l2"><a href="#d02-status-in-frontmatter-plus-a-generated-roadmap">D02. Status in frontmatter plus a generated roadmap</a></li><li class="l2"><a href="#d03-tiered-enforcement">D03. Tiered enforcement</a></li><li class="l2"><a href="#d04-exit-code-10-means-block">D04. Exit code 10 means &quot;block&quot;</a></li><li class="l2"><a href="#d05-build-from-the-index">D05. Build from the index</a></li><li class="l2"><a href="#d06-todomd-is-the-users-inbox">D06. TODO.md is the user&#x27;s inbox</a></li><li class="l2"><a href="#d07-the-tool-exempts-its-own-vendored-files">D07. The tool exempts its own vendored files</a></li><li class="l2"><a href="#d08-other-projects-consume-releases-not-the-working-tree">D08. Other projects consume releases, not the working tree</a></li><li class="l2"><a href="#d09-a-fixed-sidebar-project-pages-attach-with-parent">D09. A fixed sidebar; project pages attach with parent:</a></li><li class="l2"><a href="#d10-gates-work-waiting-on-the-user-is-recorded-once-by-id">D10. Gates: work waiting on the user is recorded once, by ID</a></li></ul></details>
+<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#d01-vendor-the-tool-into-each-project">D01. Vendor the tool into each project</a></li><li class="l2"><a href="#d02-status-in-frontmatter-plus-a-generated-roadmap">D02. Status in frontmatter plus a generated roadmap</a></li><li class="l2"><a href="#d03-tiered-enforcement">D03. Tiered enforcement</a></li><li class="l2"><a href="#d04-exit-code-10-means-block">D04. Exit code 10 means &quot;block&quot;</a></li><li class="l2"><a href="#d05-build-from-the-index">D05. Build from the index</a></li><li class="l2"><a href="#d06-todomd-is-the-users-inbox">D06. TODO.md is the user&#x27;s inbox</a></li><li class="l2"><a href="#d07-the-tool-exempts-its-own-vendored-files">D07. The tool exempts its own vendored files</a></li><li class="l2"><a href="#d08-other-projects-consume-releases-not-the-working-tree">D08. Other projects consume releases, not the working tree</a></li><li class="l2"><a href="#d09-a-fixed-sidebar-project-pages-attach-with-parent">D09. A fixed sidebar; project pages attach with parent:</a></li><li class="l2"><a href="#d10-gates-work-waiting-on-the-user-is-recorded-once-by-id">D10. Gates: work waiting on the user is recorded once, by ID</a></li><li class="l2"><a href="#d11-doc-roots-any-folder-with-docspmdocstoml-nested-ones-own-their-subtree">D11. Doc roots: any folder with docs/pmdocs.toml; nested ones own their subtree</a></li></ul></details>
 
 <h2 id="d01-vendor-the-tool-into-each-project">D01. Vendor the tool into each project</h2>
 <p><strong>Context.</strong> The tool must run in every clone, worktree and machine of an adopting project.
@@ -168,6 +168,22 @@ user's words, stops it living only in chat.
 <strong>Consequences.</strong> Agents must open a gate before handing something to the user and
 record verdicts immediately. Adopting or updating to 0.3.0 means mapping existing
 waiting items and verdict logs to gates.</p>
+<h2 id="d11-doc-roots-any-folder-with-docspmdocstoml-nested-ones-own-their-subtree">D11. Doc roots: any folder with docs/pmdocs.toml; nested ones own their subtree</h2>
+<p><strong>Context.</strong> Placed in a subfolder of a larger repository, project-docs failed silently
+(B09): git reports repo-top paths, so staleness never matched; git resolves
+<code>core.hooksPath</code> from the repo top, so the hook was never run; Claude hook commands
+assumed Claude was launched in the project folder.
+<strong>Decision.</strong> A doc root is any folder with <code>docs/pmdocs.toml</code>, and every path a doc root
+owns is relative to it and may not leave it. Nested doc roots own their subtree. A
+vendored tool finds its doc root from its own location. The git hook is a dispatcher
+serving every doc root in the repository, and Claude hooks find their tool through git.
+Inbox, backlog and gates are per doc root. See the doc-roots spec.
+<strong>Why.</strong> Monorepos and umbrella-plus-package layouts are common, and a convention that
+silently stops checking is worse than none. Confining paths to the doc root keeps each
+project self-contained and makes &quot;which docs are stale&quot; unambiguous.
+<strong>Consequences.</strong> A shared library is documented by the doc root that contains it, not
+by its users. A repository-wide view across doc roots is out of scope for now. A doc root
+at the repo top behaves exactly as before.</p>
 
 </main>
 </div>

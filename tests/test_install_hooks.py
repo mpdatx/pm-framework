@@ -95,20 +95,6 @@ def subfolder_project(repo):
     return sub
 
 
-def test_install_refuses_a_doc_root_below_the_repo_top(repo):
-    sub = subfolder_project(repo)
-    with pytest.raises(pmdocs.PmdocsError, match="must be the repository top"):
-        pmdocs.install_hooks(sub)
-    assert pmdocs.git(repo, "config", "--get", "core.hooksPath", check=False).strip() == ""
-
-
-def test_check_reports_a_doc_root_below_the_repo_top(repo):
-    sub = subfolder_project(repo)
-    r = run_cli(sub, "check")
-    assert r.returncode == 1
-    assert "must be the repository top" in r.stdout
-
-
 def test_refuses_other_hooks_path(repo):
     vendored(repo)
     git(repo, "config", "core.hooksPath", ".githooks")

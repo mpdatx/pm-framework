@@ -121,11 +121,15 @@ pre-commit hook (blocks on doc errors, warns on staleness) and from Claude Code 
 </table>
 <h2 id="init">init</h2>
 <ol>
-<li>Check <code>git rev-parse --show-toplevel</code> is the project root and <code>uv --version</code> works.
-If uv is missing, stop and tell the user (https://docs.astral.sh/uv/). If the user
-wants project-docs for a <strong>subfolder</strong> of a larger repository, stop and say so: this
-version supports a doc root only at the repository top (<code>install-hooks</code> and <code>check</code>
-refuse elsewhere, because staleness and the hooks would silently not work).</li>
+<li>Check <code>uv --version</code> works; if uv is missing, stop and tell the user
+(https://docs.astral.sh/uv/). Decide the <strong>doc root</strong> — the folder that gets <code>docs/</code>,
+<code>scripts/</code> and <code>TODO.md</code>: the repository top (<code>git rev-parse --show-toplevel</code>) by
+default, or a subfolder for one project in a larger repo. List existing doc roots
+(<code>git ls-files &quot;*docs/pmdocs.toml&quot;</code>) and say whether the new one nests inside one or
+contains one; both are allowed — a nested doc root owns its subtree. If an existing
+doc root's <code>scripts/pmdocs.py</code> is older than 0.4, run <strong>update</strong> on it first: its git
+hook predates the dispatcher that serves every doc root. Every path below is
+relative to the doc root.</li>
 <li>Vendor the tool — copy the bytes exactly, they must stay LF:
 <ul>
 <li><code>SKILL_DIR/assets/pmdocs.py</code> → <code>scripts/pmdocs.py</code></li>
@@ -158,7 +162,9 @@ ERROR. Resolve each WARN, or tell the user why it stands.</li>
 <h2 id="adopt">adopt</h2>
 <p>Read <code>SKILL_DIR/references/adopt.md</code> first — it has the inventory checklist and the
 mapping patterns from real migrations.</p>
-<ol>
+<ol start="0">
+<li>Decide the doc root as in init step 1 (the repository top unless the user means one
+project inside a larger repo); everything below is relative to it.</li>
 <li>Inventory, read-only: doc files and their roles; HTML builders; git hooks
 (<code>git config core.hooksPath</code>, <code>.git/hooks</code>, husky/lefthook/pre-commit configs); Claude
 hooks in <code>.claude/settings*.json</code>; TODO/backlog files; decision logs; spec and plan
@@ -239,7 +245,12 @@ from <code>TODO.md</code>. Never edit other <code>TODO.md</code> text.</p>
 </li>
 </ol>
 <h2 id="update">update</h2>
-<ol>
+<ol start="0">
+<li>A repository can hold several doc roots (<code>git ls-files &quot;*docs/pmdocs.toml&quot;</code>): update
+each one in turn, running its own <code>install-hooks</code> (Claude hooks are registered per
+doc root). A subfolder doc root set up before 0.4 may also have its own
+<code>.claude/settings.json</code> with pmdocs entries — remove those; the repository top's now
+holds them.</li>
 <li>Compare <code>VERSION</code> in <code>scripts/pmdocs.py</code> with <code>SKILL_DIR/assets/pmdocs.py</code>.</li>
 <li>If older: repeat init step 2, add any missing <code>.gitattributes</code> lines (init step 3),
 run <code>install-hooks</code> (idempotent), <code>build</code>, <code>check</code>.</li>

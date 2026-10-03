@@ -76,7 +76,7 @@ img,svg{max-width:100%}
 <main>
 <h1>Architecture</h1>
 <p class="summary">The single-file tool, how it is vendored, and how the hooks call it.</p>
-<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#overview">Overview</a></li><li class="l2"><a href="#releases">Releases</a></li><li class="l2"><a href="#components">Components</a></li><li class="l3"><a href="#the-tool-by-section">The tool, by section</a></li><li class="l3"><a href="#the-pre-commit-flow">The pre-commit flow</a></li><li class="l3"><a href="#the-installer">The installer</a></li><li class="l2"><a href="#code-pointers">Code pointers</a></li></ul></details>
+<details class="toc"><summary>On this page</summary><ul><li class="l2"><a href="#overview">Overview</a></li><li class="l2"><a href="#releases">Releases</a></li><li class="l2"><a href="#components">Components</a></li><li class="l3"><a href="#the-tool-by-section">The tool, by section</a></li><li class="l3"><a href="#doc-roots">Doc roots</a></li><li class="l3"><a href="#the-pre-commit-flow">The pre-commit flow</a></li><li class="l3"><a href="#the-installer">The installer</a></li><li class="l2"><a href="#code-pointers">Code pointers</a></li></ul></details>
 
 <h2 id="overview">Overview</h2>
 <p><code>tool/pmdocs.py</code> is the one source of the tool. <code>scripts/sync_assets.py</code> copies it (and
@@ -159,8 +159,22 @@ release&quot;. Bump <code>VERSION</code> in <code>tool/pmdocs.py</code> once per
 </tr>
 </tbody>
 </table>
+<h3 id="doc-roots">Doc roots</h3>
+<p>The tool serves one <strong>doc root</strong>, the folder holding <code>docs/pmdocs.toml</code>, which may be
+the repository top or a subfolder (B09, D11). A vendored copy finds its doc root from
+its own location (<code>own_root</code>: <code>&lt;root&gt;/scripts/pmdocs.py</code>), so it doesn't matter where
+git or Claude was started. All git output is made doc-root-relative: <code>diff --relative</code>
+for changed files, while <code>ls-files</code> already is. Files inside nested doc roots
+(<code>Config.nested</code>, discovered from tracked and untracked <code>*/docs/pmdocs.toml</code>) are
+dropped by <code>in_territory</code>. <code>checkout-index</code> writes at repo-top paths, so the index
+export of a doc root at <code>apps/foo/</code> lives at <code>&lt;tmp&gt;/apps/foo/</code> (<code>export_index</code> returns
+it). The git hook is a dispatcher over every doc root a commit touches. Claude Code hook
+entries, one set per doc root in the repo top's settings, locate their tool via
+<code>git rev-parse --show-toplevel</code>.</p>
 <h3 id="the-pre-commit-flow">The pre-commit flow</h3>
-<ol>
+<ol start="0">
+<li>The sh dispatcher (<code>scripts/hooks/pre-commit</code>) runs, from each doc root a commit
+touches, that root's <code>scripts/pmdocs.py hook pre-commit</code>. It blocks if any returns 10.</li>
 <li>Skip on <code>PMDOCS_SKIP=1</code> or mid-merge/rebase.</li>
 <li>Apply fixes to files the user has fully staged; stage the fixed files.</li>
 <li>Export the index's <code>docs/</code> and <code>TODO.md</code> to a temp dir; validate there.</li>

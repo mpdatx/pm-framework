@@ -7,8 +7,9 @@ summary: The full convention — file layout, frontmatter, backlog and decision 
 
 ## Layout
 
-The layout lives at the **repository top** (the doc root must be
-`git rev-parse --show-toplevel`; `install-hooks` and `check` refuse anywhere else for now).
+The layout lives at a **doc root** — the repository top, or a subfolder for one project
+inside a larger repository (see [Doc roots](#doc-roots)). All paths below are relative
+to it.
 
 ```
 TODO.md                  inbox — user-owned, free-form
@@ -30,6 +31,30 @@ scripts/pmdocs.py        vendored tool
 scripts/hooks/pre-commit vendored git hook (core.hooksPath = scripts/hooks)
 .claude/settings.json    PostToolUse, Stop and SessionStart hooks (merged by install-hooks)
 ```
+
+## Doc roots
+
+A doc root is any folder containing `docs/pmdocs.toml`. A repository may hold several:
+one at the top, one per package, or both.
+
+- **Everything is relative to the doc root.** Doc-map paths and pages, `[coverage]`,
+  `[[site.extra]]`, `TODO.md`, the README, the site, the backlog and the gates. A
+  configured path that leaves the doc root (`../…`) is an ERROR; shared code is
+  documented by the doc root that contains it.
+- **Nested doc roots own their subtree.** A doc root inside another — `packages/a/`
+  under a top-level umbrella — takes its files out of the outer one's pages, coverage
+  and staleness. Nothing needs excluding by hand.
+- **One git hook serves the whole repository.** The vendored `scripts/hooks/pre-commit`
+  is a dispatcher: it runs every doc root's own tool for the doc roots a commit
+  touches, and blocks if any reports an error. `core.hooksPath` points at whichever doc
+  root installed first; the others reuse it (`install-hooks --status` lists the doc
+  roots it covers).
+- **Claude Code hooks live in the repository top's `.claude/settings.json`**, one set
+  per doc root. Each finds its tool through git
+  (`"$(git rev-parse --show-toplevel)/<doc root>/scripts/pmdocs.py"`) and answers only
+  for its own project; with several doc roots, their notes carry the project's
+  `[site] title`.
+- **Inbox, backlog, gates and roadmap are per doc root.**
 
 ## Frontmatter (YAML, between `---` lines)
 

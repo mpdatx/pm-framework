@@ -27,11 +27,15 @@ pre-commit hook (blocks on doc errors, warns on staleness) and from Claude Code 
 
 ## init
 
-1. Check `git rev-parse --show-toplevel` is the project root and `uv --version` works.
-   If uv is missing, stop and tell the user (https://docs.astral.sh/uv/). If the user
-   wants project-docs for a **subfolder** of a larger repository, stop and say so: this
-   version supports a doc root only at the repository top (`install-hooks` and `check`
-   refuse elsewhere, because staleness and the hooks would silently not work).
+1. Check `uv --version` works; if uv is missing, stop and tell the user
+   (https://docs.astral.sh/uv/). Decide the **doc root** — the folder that gets `docs/`,
+   `scripts/` and `TODO.md`: the repository top (`git rev-parse --show-toplevel`) by
+   default, or a subfolder for one project in a larger repo. List existing doc roots
+   (`git ls-files "*docs/pmdocs.toml"`) and say whether the new one nests inside one or
+   contains one; both are allowed — a nested doc root owns its subtree. If an existing
+   doc root's `scripts/pmdocs.py` is older than 0.4, run **update** on it first: its git
+   hook predates the dispatcher that serves every doc root. Every path below is
+   relative to the doc root.
 2. Vendor the tool — copy the bytes exactly, they must stay LF:
    - `SKILL_DIR/assets/pmdocs.py` → `scripts/pmdocs.py`
    - `SKILL_DIR/assets/hooks/pre-commit` → `scripts/hooks/pre-commit`
@@ -63,6 +67,8 @@ pre-commit hook (blocks on doc errors, warns on staleness) and from Claude Code 
 Read `SKILL_DIR/references/adopt.md` first — it has the inventory checklist and the
 mapping patterns from real migrations.
 
+0. Decide the doc root as in init step 1 (the repository top unless the user means one
+   project inside a larger repo); everything below is relative to it.
 1. Inventory, read-only: doc files and their roles; HTML builders; git hooks
    (`git config core.hooksPath`, `.git/hooks`, husky/lefthook/pre-commit configs); Claude
    hooks in `.claude/settings*.json`; TODO/backlog files; decision logs; spec and plan
@@ -134,6 +140,11 @@ Moves items from the user's `TODO.md` inbox into `docs/backlog.md`.
 
 ## update
 
+0. A repository can hold several doc roots (`git ls-files "*docs/pmdocs.toml"`): update
+   each one in turn, running its own `install-hooks` (Claude hooks are registered per
+   doc root). A subfolder doc root set up before 0.4 may also have its own
+   `.claude/settings.json` with pmdocs entries — remove those; the repository top's now
+   holds them.
 1. Compare `VERSION` in `scripts/pmdocs.py` with `SKILL_DIR/assets/pmdocs.py`.
 2. If older: repeat init step 2, add any missing `.gitattributes` lines (init step 3),
    run `install-hooks` (idempotent), `build`, `check`.

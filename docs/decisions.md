@@ -115,3 +115,21 @@ user's words, stops it living only in chat.
 **Consequences.** Agents must open a gate before handing something to the user and
 record verdicts immediately. Adopting or updating to 0.3.0 means mapping existing
 waiting items and verdict logs to gates.
+
+## D11. Doc roots: any folder with docs/pmdocs.toml; nested ones own their subtree
+
+**Context.** Placed in a subfolder of a larger repository, project-docs failed silently
+(B09): git reports repo-top paths, so staleness never matched; git resolves
+`core.hooksPath` from the repo top, so the hook was never run; Claude hook commands
+assumed Claude was launched in the project folder.
+**Decision.** A doc root is any folder with `docs/pmdocs.toml`, and every path a doc root
+owns is relative to it and may not leave it. Nested doc roots own their subtree. A
+vendored tool finds its doc root from its own location. The git hook is a dispatcher
+serving every doc root in the repository, and Claude hooks find their tool through git.
+Inbox, backlog and gates are per doc root. See the doc-roots spec.
+**Why.** Monorepos and umbrella-plus-package layouts are common, and a convention that
+silently stops checking is worse than none. Confining paths to the doc root keeps each
+project self-contained and makes "which docs are stale" unambiguous.
+**Consequences.** A shared library is documented by the doc root that contains it, not
+by its users. A repository-wide view across doc roots is out of scope for now. A doc root
+at the repo top behaves exactly as before.
